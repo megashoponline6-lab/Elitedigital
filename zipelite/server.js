@@ -80,6 +80,16 @@ await run(`CREATE TABLE IF NOT EXISTS manual_sales (id INTEGER PRIMARY KEY AUTOI
 await run(`CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, estado TEXT DEFAULT 'abierto', created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER, autor TEXT, mensaje TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 
+// 👑 Crear admin por defecto si no existe
+const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
+if (adminCount.c === 0) {
+  const defaultUser = 'ml3838761@gmail.com';
+  const defaultPass = '07141512';
+  const passhash = await bcrypt.hash(defaultPass, 12);
+  await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?);`, [defaultUser, passhash]);
+  console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
+}
+
 // 🌱 Seed productos si está vacío
 const c = await get(`SELECT COUNT(*) as c FROM products;`);
 if (c.c === 0) {
