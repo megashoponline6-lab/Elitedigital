@@ -1,11 +1,23 @@
-
-<% layout('layout', { title: 'Ingresar' }) %>
+<% var title = 'Ingresar'; %>
 <h2>Iniciar sesión</h2>
+
 <%- include('partials/errors', { errores }) %>
-<% if (ok) { %><div class="alert alert-success">Registro exitoso, ahora puedes iniciar sesión.</div><% } %>
+
+<% if (ok) { %>
+  <div class="alert alert-success">Registro exitoso, ahora puedes iniciar sesión.</div>
+<% } %>
+
 <form method="post" class="row g-3">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-  <div class="col-md-6"><label class="form-label">Correo</label><input type="email" name="correo" class="form-control" required></div>
-  <div class="col-md-6"><label class="form-label">Contraseña</label><input type="password" name="password" class="form-control" required></div>
-  <div class="col-12"><button class="btn btn-danger">Entrar</button></div>
+  <div class="col-md-6">
+    <label class="form-label">Correo</label>
+    <input type="email" name="correo" class="form-control" required>
+  </div>
+  <div class="col-md-6">
+    <label class="form-label">Contraseña</label>
+    <input type="password" name="password" class="form-control" required>
+  </div>
+  <div class="col-12">
+    <button class="btn btn-danger">Entrar</button>
+  </div>
 </form>
