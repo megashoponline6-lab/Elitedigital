@@ -1,4 +1,6 @@
+<% layout = 'layout' %>
 <% var title = 'Inicio'; %>
+
 <div class="row align-items-center">
   <div class="col-lg-6">
     <h1 class="display-5 fw-bold">Todo tu entretenimiento en un solo lugar.</h1>
@@ -8,7 +10,7 @@
       <a class="btn btn-outline-danger" href="/admin">Admin</a>
     </div>
     <div class="mb-2">
-      <% if (etiquetas.length) { %>
+      <% if (etiquetas && etiquetas.length) { %>
         <div class="btn-group flex-wrap">
           <a class="btn btn-sm <%= !filtro ? 'btn-light' : 'btn-outline-light' %>" href="/">Todos</a>
           <% etiquetas.forEach(e => { %>
@@ -22,7 +24,9 @@
     <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" class="img-fluid rounded-4 shadow-lg" alt="Hero">
   </div>
 </div>
+
 <hr>
+
 <div class="row g-3">
   <% productos.forEach(p => { %>
     <div class="col-6 col-md-4 col-lg-3">
