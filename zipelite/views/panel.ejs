@@ -1,0 +1,50 @@
+
+<% layout('layout', { title: 'Mi Panel' }) %>
+<h2 class="mb-3">Hola, <%= user.nombre %> 👋</h2>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card bg-black border-secondary rounded-4"><div class="card-body">
+      <h5>Mis datos</h5>
+      <p class="mb-1"><strong>Nombre:</strong> <%= user.nombre %> <%= user.apellido %></p>
+      <p class="mb-1"><strong>País:</strong> <%= user.pais %></p>
+      <p class="mb-1"><strong>Correo:</strong> <%= user.correo %></p>
+      <% if (user.telefono) { %><p class="mb-1"><strong>Teléfono:</strong> <%= user.telefono %></p><% } %>
+      <p class="display-6">Saldo: $<%= user.saldo %> MXN</p>
+    </div></div>
+  </div>
+  <div class="col-md-4">
+    <div class="card bg-black border-secondary rounded-4"><div class="card-body">
+      <h5>Renovación</h5>
+      <% if (sub) { %>
+        <p class="mb-1"><strong>Servicio:</strong> <%= sub.prod_nombre %></p>
+        <p class="mb-1"><strong>Vence:</strong> <%= dayjs(sub.vence_en).format('DD/MM/YYYY') %>
+          <% if (dias !== null) { %>
+            <span class="badge text-bg-warning ms-2"><%= dias %> días</span>
+          <% } %>
+        </p>
+        <div class="alert alert-warning mt-2">Te avisaremos cuando la fecha esté cerca.</div>
+      <% } else { %>
+        <p>No tienes una suscripción asignada aún.</p>
+      <% } %>
+    </div></div>
+  </div>
+  <div class="col-md-4" id="soporte">
+    <div class="card bg-black border-secondary rounded-4"><div class="card-body">
+      <h5>Soporte</h5>
+      <form method="post" action="/ticket">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <textarea class="form-control mb-2" name="mensaje" rows="3" placeholder="Escribe tu mensaje"></textarea>
+        <button class="btn btn-danger">Enviar</button>
+      </form>
+      <% if (tickets.length) { %>
+        <hr>
+        <h6>Mis tickets</h6>
+        <ul class="list-unstyled small">
+          <% tickets.forEach(t => { %>
+            <li>#<%= t.id %> - <span class="badge <%= t.estado==='abierto'?'text-bg-warning':'text-bg-secondary' %>"><%= t.estado %></span></li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </div></div>
+  </div>
+</div>

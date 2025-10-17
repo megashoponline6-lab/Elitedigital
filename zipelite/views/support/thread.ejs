@@ -1,0 +1,19 @@
+
+<% layout('../layout', { title: 'Ticket #' + t.id }) %>
+<h3>Ticket #<%= t.id %> — <%= t.correo %></h3>
+<p>Estado: <span class="badge <%= t.estado==='abierto'?'text-bg-warning':'text-bg-secondary' %>"><%= t.estado %></span></p>
+<div class="card bg-black border-secondary rounded-4"><div class="card-body">
+  <% if (msgs.length===0) { %><p class="text-secondary">Sin mensajes.</p><% } %>
+  <ul class="list-unstyled">
+    <% msgs.forEach(m => { %>
+      <li class="mb-2"><strong><%= m.autor %>:</strong> <%= m.mensaje %> <span class="text-secondary small">(<%= m.created_at %>)</span></li>
+    <% }) %>
+  </ul>
+  <form method="post" action="/admin/ticket/<%= t.id %>/mensaje">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <textarea class="form-control mb-2" name="mensaje" rows="3" placeholder="Responder..."></textarea>
+    <button class="btn btn-success">Enviar</button>
+    <a class="btn btn-outline-light" href="/admin/panel">Volver</a>
+    <button formaction="/admin/ticket/<%= t.id %>/cerrar" class="btn btn-outline-danger ms-2">Cerrar</button>
+  </form>
+</div></div>

@@ -1,0 +1,6 @@
+
+body { background: radial-gradient(1200px 600px at top right, #2b0008 0%, rgba(0,0,0,0) 40%) #0b0b0b; }
+.card { box-shadow: 0 10px 30px rgba(255,0,40,0.08); }
+.navbar-brand { letter-spacing: 0.5px; }
+.btn-group .btn { margin-right: .25rem; margin-bottom: .25rem; }
+img.card-img-top { object-fit: cover; height: 120px; }
