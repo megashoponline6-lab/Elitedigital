@@ -246,7 +246,41 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 🔄 Activar/desactivar productos ✅ FIX
+// 🛠 Cambiar contraseña de admin
+app.get('/admin/cambiar-password', requireAdmin, csrfProtection, (req, res) => {
+  res.render('admin/change-password', { csrfToken: req.csrfToken(), errores: [], ok: null });
+});
+
+app.post(
+  '/admin/cambiar-password',
+  requireAdmin,
+  csrfProtection,
+  body('actual').notEmpty(),
+  body('nueva').isLength({ min: 8 }),
+  body('confirmar').notEmpty(),
+  async (req, res) => {
+    const { actual, nueva, confirmar } = req.body;
+    const errores = [];
+    const admin = await get(`SELECT * FROM admins WHERE id=?;`, [req.session.admin.id]);
+
+    if (!await bcrypt.compare(actual, admin.passhash)) {
+      errores.push({ msg: 'La contraseña actual es incorrecta.' });
+    }
+    if (nueva !== confirmar) {
+      errores.push({ msg: 'Las contraseñas nuevas no coinciden.' });
+    }
+
+    if (errores.length) {
+      return res.render('admin/change-password', { csrfToken: req.csrfToken(), errores, ok: null });
+    }
+
+    const nuevaHash = await bcrypt.hash(nueva, 12);
+    await run(`UPDATE admins SET passhash=? WHERE id=?;`, [nuevaHash, admin.id]);
+    res.render('admin/change-password', { csrfToken: req.csrfToken(), errores: [], ok: 'Contraseña actualizada correctamente ✅' });
+  }
+);
+
+// 🔄 Activar/desactivar productos ✅
 app.post('/admin/producto/:id/editar', requireAdmin, csrfProtection, upload.single('logoimg'), async (req, res) => {
   const { nombre, etiqueta, precio, activo, logo } = req.body;
   const activoVal = String(activo) === '1' ? 1 : 0;
