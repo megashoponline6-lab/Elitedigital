@@ -1,35 +1,50 @@
-<% var title = 'Configurar Admin'; %>
+<% var title = 'Configurar Administrador'; %>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="fw-bold text-danger">Configuración Inicial del Administrador</h2>
+  <h2 class="fw-bold text-danger">
+    <i class="bi bi-gear-fill me-2"></i>Configuración Inicial del Administrador
+  </h2>
 </div>
 
 <!-- 🔔 Mensajes de error -->
 <% if (errores && errores.length) { %>
-  <div class="alert alert-danger">
-    <% errores.forEach(e => { %>
-      <div><%= e.msg %></div>
-    <% }) %>
+  <div class="alert alert-danger border border-danger-subtle rounded-4 shadow-sm">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    Se encontraron los siguientes errores:
+    <ul class="mt-2 mb-0 small">
+      <% errores.forEach(e => { %>
+        <li><%= e.msg %></li>
+      <% }) %>
+    </ul>
   </div>
 <% } %>
 
-<div class="card bg-black border border-secondary rounded-4 shadow-lg p-4 mt-3">
-  <form method="post">
+<!-- 🧠 Tarjeta de configuración -->
+<div class="card bg-black border border-secondary rounded-4 shadow-lg p-4 mt-3 mx-auto" style="max-width: 450px;">
+  <form method="post" autocomplete="off">
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
     <div class="mb-3">
-      <label class="form-label text-light">Usuario</label>
+      <label class="form-label text-light">
+        <i class="bi bi-person-fill me-1"></i>Usuario
+      </label>
       <input name="usuario" class="form-control bg-dark text-light border-secondary" placeholder="Correo o nombre de usuario" required>
     </div>
 
     <div class="mb-3">
-      <label class="form-label text-light">Contraseña (mínimo 8 caracteres)</label>
+      <label class="form-label text-light">
+        <i class="bi bi-key-fill me-1"></i>Contraseña (mínimo 8 caracteres)
+      </label>
       <input type="password" name="password" minlength="8" class="form-control bg-dark text-light border-secondary" placeholder="********" required>
     </div>
 
-    <button class="btn btn-danger w-100 mt-2 py-2">Guardar configuración</button>
+    <button class="btn btn-danger w-100 mt-2 py-2">
+      <i class="bi bi-check-circle-fill me-1"></i>Guardar configuración
+    </button>
   </form>
 </div>
 
-<p class="text-secondary small mt-3 text-center">
-  ⚙️ Solo se requiere ejecutar esta configuración una vez.
+<!-- 🧩 Nota final -->
+<p class="text-secondary small mt-4 text-center">
+  ⚙️ Esta configuración solo debe realizarse una vez para crear la cuenta principal de administrador.
 </p>
