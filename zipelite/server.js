@@ -103,7 +103,7 @@ await run(`CREATE TABLE IF NOT EXISTS allocations (
   end_at TEXT
 );`);
 
-// 👑 Crear admin por defecto si no existe
+// 👑 Admin por defecto
 const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
 if (adminCount.c === 0) {
   const defaultUser = 'ml3838761@gmail.com';
@@ -133,7 +133,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Página principal (DEJAMOS TU LÓGICA ACTUAL)
+// 🏠 Home
 app.get('/', async (req, res, next) => {
   try {
     const etiquetas = await all(`SELECT DISTINCT etiqueta FROM products WHERE activo=1 ORDER BY etiqueta;`);
@@ -145,16 +145,15 @@ app.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 🔒 Catálogo SOLO para logueados (tu vista ya está lista para esto)
+// 🔒 Catálogo solo logueados
 app.get('/catalogo', requireAuth, async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
-    // La vista nueva ya no usa etiquetas/filtro, pero enviarlas no rompe nada
     res.render('catalogo', { productos, etiquetas: [], filtro: '' });
   } catch (e) { next(e); }
 });
 
-// 📝 Registro de clientes
+// 📝 Registro
 app.get('/registro', csrfProtection, (req, res) => res.render('registro', { csrfToken: req.csrfToken(), errores: [] }));
 
 function normalizeEmail(correo) {
@@ -184,7 +183,7 @@ app.post('/registro',
   }
 );
 
-// 👤 Login clientes
+// 👤 Login
 app.get('/login', csrfProtection, (req, res) =>
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
 );
@@ -206,7 +205,7 @@ app.post('/login',
 
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
 
-// 👤 Panel usuario (enviamos asignaciones para credenciales)
+// 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
   const sub = await get(
@@ -218,7 +217,6 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   );
   const dias = sub ? Math.ceil((new Date(sub.vence_en) - new Date()) / (1000 * 60 * 60 * 24)) : null;
 
-  // Nuevas: asignaciones para mostrar en panel (credenciales entregadas)
   const asignaciones = await all(
     `SELECT a.*, p.nombre AS prod_nombre, acc.correo AS acc_correo, acc.password AS acc_password
      FROM allocations a
@@ -232,7 +230,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   res.render('panel', { csrfToken: req.csrfToken(), user, sub, dias, asignaciones, tickets: [] });
 });
 
-// 🧾 (Tickets) — lo dejamos por compatibilidad, aunque tu panel ya no lo usa
+// 🧾 Tickets (compatibilidad)
 app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
   let ticketId = req.body.ticket_id;
   if (!ticketId) {
@@ -243,13 +241,18 @@ app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), asy
   res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
-// 🛒 Páginas de compra (1, 2, 3 meses)
+// 🛒 Comprar: página
 app.get('/comprar/:id', requireAuth, csrfProtection, async (req, res) => {
   const prod = await get(`SELECT * FROM products WHERE id=? AND activo=1;`, [parseInt(req.params.id)]);
   if (!prod) return res.redirect('/catalogo?error=Producto no disponible');
-  res.render('comprar', { csrfToken: req.csrfToken(), prod });
+
+  // 🔧 Ajuste: enviamos también el user para que comprar.ejs pueda revisar saldo
+  const user = await get(`SELECT id, saldo FROM users WHERE id=?;`, [req.session.user.id]);
+
+  res.render('comprar', { csrfToken: req.csrfToken(), prod, user });
 });
 
+// 🛒 Comprar: acción
 app.post('/comprar/:id', requireAuth, csrfProtection, body('meses').isIn(['1','2','3']), async (req, res) => {
   const userId = req.session.user.id;
   const meses = parseInt(req.body.meses);
@@ -270,7 +273,7 @@ app.post('/comprar/:id', requireAuth, csrfProtection, body('meses').isIn(['1','2
   const vence = dayjs().add(meses, 'month').format('YYYY-MM-DD');
   await run(`INSERT INTO subscriptions (user_id, product_id, vence_en) VALUES (?,?,?);`, [userId, prod.id, vence]);
 
-  // Buscar cuenta disponible (no repetitiva salvo cupos)
+  // Buscar cuenta disponible
   const cuenta = await get(
     `SELECT * FROM accounts
      WHERE product_id=? AND activo=1 AND cupos_usados < cupos
@@ -292,17 +295,17 @@ app.post('/comprar/:id', requireAuth, csrfProtection, body('meses').isIn(['1','2
   );
   await run(`UPDATE accounts SET cupos_usados = cupos_usados + 1 WHERE id=?;`, [cuenta.id]);
 
-  // Si llegó al tope, dejarla como agotada (opcional: mantener activo=1 pero sin cupos)
+  // (Opcional) Agotar automáticamente cuando se llegan los cupos
   const after = await get(`SELECT cupos, cupos_usados FROM accounts WHERE id=?;`, [cuenta.id]);
   if (after && after.cupos_usados >= after.cupos) {
-    // Puedes optar por desactivarla automáticamente:
+    // Ejemplo: mantener activo=1 pero sin cupos. Si prefieres desactivar:
     // await run(`UPDATE accounts SET activo=0 WHERE id=?;`, [cuenta.id]);
   }
 
   res.redirect(`/panel?ok=Compra realizada`);
 });
 
-// 🔑 Admin setup (solo primera vez)
+// 🔑 Admin setup
 app.get('/admin/setup', csrfProtection, async (req, res) => {
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c > 0) return res.redirect('/admin');
@@ -332,7 +335,7 @@ app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').
 });
 app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
-// 📊 Panel admin (ahora incluye cuentas y vendidas)
+// 📊 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users ORDER BY id DESC LIMIT 15;`);
@@ -386,7 +389,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   res.redirect('/admin/panel?ok=recarga');
 });
 
-// 🔄 Editar producto (logo, precio, activo) — tal como ya lo tenías
+// 🔄 Editar producto
 app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   const { nombre, etiqueta, precio, activo, logo } = req.body;
   const activoVal = String(activo) === '1' ? 1 : 0;
@@ -397,7 +400,7 @@ app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), c
   res.redirect('/admin/panel?ok=Producto actualizado');
 });
 
-// 👤 Activar/Desactivar cliente — como ya estaba
+// 👤 Activar/Desactivar cliente
 app.post('/admin/cliente/:id/toggle', requireAdmin, csrfProtection, async (req, res) => {
   const user = await get(`SELECT activo FROM users WHERE id=?;`, [parseInt(req.params.id)]);
   const nuevo = user.activo ? 0 : 1;
@@ -425,9 +428,9 @@ app.post('/admin/cuenta/:id/toggle', requireAdmin, csrfProtection, async (req, r
   res.redirect('/admin/panel?ok=Cuenta actualizada');
 });
 
-// 🆕 Admin: reactivar cuenta (resetear cupos usados a 0 y activar)
+// 🆕 Admin: reactivar cuenta
 app.post('/admin/cuenta/:id/reactivar', requireAdmin, csrfProtection, async (req, res) => {
-  const { cupos } = req.body; // opcional: permitir ajustar cupos
+  const { cupos } = req.body;
   const id = parseInt(req.params.id);
   const cta = await get(`SELECT id FROM accounts WHERE id=?;`, [id]);
   if (!cta) return res.redirect('/admin/panel?error=nocuenta');
