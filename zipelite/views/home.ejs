@@ -1,54 +1,131 @@
 <% layout = 'layout' %>
 <% var title = 'Inicio'; %>
 
-<section class="text-center my-5">
-  <div class="container">
-    <!-- 🖼 Imagen principal -->
-    <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" 
-         alt="Eliteflix portada"
-         class="img-fluid rounded-4 shadow-lg mb-4" 
-         style="max-height: 400px; object-fit: cover;">
+<style>
+  body {
+    background: url('/public/img/fondo.jpg') center center / cover no-repeat fixed;
+    min-height: 100vh;
+    color: #fff;
+    position: relative;
+  }
 
-    <!-- 🧾 Título -->
-    <h1 class="display-5 fw-bold text-danger mb-3">Tu entretenimiento en un solo lugar</h1>
-    <p class="lead text-secondary mb-4">
-      Accede a Netflix, Spotify, Disney+, YouTube Premium, HBO Max y más.  
-      <br>Todo desde una sola plataforma con planes flexibles.
-    </p>
+  .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(10, 0, 0, 0.82);
+    backdrop-filter: blur(5px);
+    z-index: 0;
+  }
 
-    <!-- 🎯 Botones -->
-    <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
-      <% if (sess && sess.user) { %>
-        <a class="btn btn-danger px-4 py-2" href="/catalogo">Ver catálogo</a>
-        <a class="btn btn-outline-light px-4 py-2" href="/panel">Mi Panel</a>
-      <% } else { %>
-        <a class="btn btn-danger px-4 py-2" href="/login">Ingresar</a>
-        <a class="btn btn-outline-light px-4 py-2" href="/registro">Registrarse</a>
-      <% } %>
-    </div>
+  .hero {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 8rem 1rem 6rem;
+  }
 
-    <!-- 💬 Botones de Telegram -->
-    <div class="d-flex justify-content-center flex-wrap gap-3">
-      <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-outline-danger px-4 py-2">
-        💬 Soporte Telegram
-      </a>
-      <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-danger px-4 py-2">
-        📢 Canal Oficial
-      </a>
-    </div>
+  .hero h1 {
+    font-weight: 800;
+    font-size: 3.2rem;
+    letter-spacing: 1px;
+    color: #ff1a2a;
+    text-shadow: 0 0 25px rgba(255, 0, 40, 0.7);
+  }
+
+  .hero p {
+    color: #ddd;
+    font-size: 1.2rem;
+  }
+
+  .btn-custom {
+    font-size: 1.1rem;
+    padding: 0.8rem 1.6rem;
+    border-radius: 50px;
+    transition: all 0.3s ease;
+  }
+
+  .btn-custom i {
+    margin-right: 0.4rem;
+  }
+
+  .btn-blue {
+    background-color: #0088cc;
+    color: #fff;
+  }
+
+  .btn-blue:hover {
+    background-color: #0a9be6;
+  }
+
+  .btn-red {
+    background-color: #dc3545;
+    color: #fff;
+  }
+
+  .btn-red:hover {
+    background-color: #ff4757;
+  }
+
+  .btn-outline-light:hover {
+    background-color: #fff;
+    color: #000;
+  }
+
+  .platform-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .platform-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 25px rgba(255, 0, 40, 0.3);
+  }
+</style>
+
+<div class="overlay"></div>
+
+<section class="hero container">
+  <!-- 🧾 Título -->
+  <h1 class="mb-3">Tu entretenimiento en un solo lugar</h1>
+  <p class="lead mb-4">
+    Accede a Netflix, Spotify, Disney+, YouTube Premium, HBO Max y más.  
+    Todo desde una sola plataforma con planes flexibles.
+  </p>
+
+  <!-- 🎯 Botones principales -->
+  <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
+    <% if (sess && sess.user) { %>
+      <a class="btn btn-danger btn-custom" href="/catalogo"><i class="bi bi-grid-fill"></i> Ver catálogo</a>
+      <a class="btn btn-outline-light btn-custom" href="/panel"><i class="bi bi-person-fill"></i> Mi Panel</a>
+    <% } else { %>
+      <a class="btn btn-danger btn-custom" href="/login"><i class="bi bi-box-arrow-in-right"></i> Ingresar</a>
+      <a class="btn btn-outline-light btn-custom" href="/registro"><i class="bi bi-person-plus-fill"></i> Registrarse</a>
+    <% } %>
+  </div>
+
+  <!-- 💬 Botones de Telegram -->
+  <div class="d-flex justify-content-center flex-wrap gap-3 mt-3">
+    <a href="https://t.me/soporteeliteflix" target="_blank" class="btn btn-blue btn-custom shadow">
+      <i class="bi bi-telegram"></i> Soporte en Telegram
+    </a>
+    <a href="https://t.me/+2FVmdvbVt1czMjFh" target="_blank" class="btn btn-red btn-custom shadow">
+      <i class="bi bi-broadcast"></i> Canal de Telegram
+    </a>
   </div>
 </section>
 
 <hr class="my-5 text-secondary">
 
-<section class="container text-center">
+<section class="container text-center pb-5">
   <h2 class="fw-bold text-danger mb-4">Plataformas disponibles</h2>
 
   <div class="row g-3">
     <% if (productos && productos.length) { %>
       <% productos.forEach(p => { %>
         <div class="col-6 col-md-3 col-lg-2">
-          <div class="card h-100 bg-black border border-secondary rounded-4 p-3 hover-shadow-sm">
+          <div class="card h-100 bg-black border border-secondary rounded-4 p-3 platform-card">
             <% if (p.logo) { %>
               <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid mb-2" style="max-height: 60px; object-fit: contain;">
             <% } %>
