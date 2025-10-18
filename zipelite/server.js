@@ -290,8 +290,8 @@ app.post(
   }
 );
 
-// 🔄 Activar/desactivar productos ✅
-app.post('/admin/producto/:id/editar', requireAdmin, csrfProtection, upload.single('logoimg'), async (req, res) => {
+// 🔄 Activar/desactivar productos ✅ (orden corregido)
+app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   const { nombre, etiqueta, precio, activo, logo } = req.body;
   const activoVal = String(activo) === '1' ? 1 : 0;
   let logoField = logo;
