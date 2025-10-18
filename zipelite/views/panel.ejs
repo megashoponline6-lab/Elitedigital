@@ -2,6 +2,8 @@
 <h2 class="mb-3">Hola, <%= user.nombre %> 👋</h2>
 
 <div class="row g-3">
+
+  <!-- 🧾 DATOS DEL USUARIO -->
   <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
@@ -13,10 +15,14 @@
           <p class="mb-1"><strong>Teléfono:</strong> <%= user.telefono %></p>
         <% } %>
         <p class="display-6">Saldo: $<%= user.saldo %> MXN</p>
+        <div class="mt-3">
+          <a href="/catalogo" class="btn btn-danger btn-sm">Comprar suscripción</a>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- 🗓️ SUSCRIPCIÓN ACTIVA -->
   <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
@@ -31,36 +37,45 @@
           </p>
           <div class="alert alert-warning mt-2">Te avisaremos cuando la fecha esté cerca.</div>
         <% } else { %>
-          <p>No tienes una suscripción asignada aún.</p>
+          <p>No tienes una suscripción activa aún.</p>
         <% } %>
       </div>
     </div>
   </div>
 
-  <div class="col-md-4" id="soporte">
+  <!-- 💬 CREDENCIALES ENTREGADAS -->
+  <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
-        <h5>Soporte</h5>
-        <form method="post" action="/ticket">
-          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <textarea class="form-control mb-2" name="mensaje" rows="3" placeholder="Escribe tu mensaje"></textarea>
-          <button class="btn btn-danger">Enviar</button>
-        </form>
-
-        <% if (tickets.length) { %>
-          <hr>
-          <h6>Mis tickets</h6>
-          <ul class="list-unstyled small">
-            <% tickets.forEach(t => { %>
-              <li>#<%= t.id %> - 
-                <span class="badge <%= t.estado==='abierto' ? 'text-bg-warning' : 'text-bg-secondary' %>">
-                  <%= t.estado %>
-                </span>
-              </li>
-            <% }) %>
-          </ul>
+        <h5>Mis credenciales entregadas</h5>
+        <% if (asignaciones && asignaciones.length) { %>
+          <div class="table-responsive">
+            <table class="table table-dark table-sm align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Correo</th>
+                  <th>Contraseña</th>
+                  <th>Vence</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% asignaciones.forEach(a => { %>
+                  <tr>
+                    <td><%= a.prod_nombre %></td>
+                    <td><code><%= a.acc_correo %></code></td>
+                    <td><code><%= a.acc_password %></code></td>
+                    <td><%= dayjs(a.end_at).format('DD/MM/YYYY') %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        <% } else { %>
+          <p class="text-secondary small mb-0">Aún no tienes credenciales asignadas.</p>
         <% } %>
       </div>
     </div>
   </div>
+
 </div>
