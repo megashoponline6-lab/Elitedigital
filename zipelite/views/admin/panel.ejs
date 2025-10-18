@@ -41,7 +41,7 @@
     </div>
   </div>
 
-  <!-- 💰 RECARGAR SALDO (ahora por correo) -->
+  <!-- 💰 RECARGAR SALDO -->
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
@@ -167,7 +167,8 @@
                     </form>
                     <form class="d-inline" method="post" action="/admin/cuenta/<%= c.id %>/reactivar">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                      <button class="btn btn-sm btn-outline-warning">Reactivar</button>
+                      <input type="number" name="cupos" class="form-control form-control-sm d-inline-block text-center" style="width:70px" min="1" placeholder="Cupos">
+                      <button class="btn btn-sm btn-outline-warning ms-1">Reactivar</button>
                     </form>
                   </td>
                 </tr>
