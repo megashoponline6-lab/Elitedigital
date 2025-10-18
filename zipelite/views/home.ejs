@@ -1,45 +1,65 @@
 <% layout = 'layout' %>
 <% var title = 'Inicio'; %>
 
-<div class="row align-items-center">
-  <div class="col-lg-6">
-    <h1 class="display-5 fw-bold">Todo tu entretenimiento en un solo lugar.</h1>
-    <p class="lead text-secondary">Series, películas y música con planes flexibles.</p>
-    <div class="btn-group mb-3">
-      <a class="btn btn-danger" href="/catalogo">Ver catálogo</a>
-      <a class="btn btn-outline-danger" href="/admin">Admin</a>
-    </div>
-    <div class="mb-2">
-      <% if (etiquetas && etiquetas.length) { %>
-        <div class="btn-group flex-wrap">
-          <a class="btn btn-sm <%= !filtro ? 'btn-light' : 'btn-outline-light' %>" href="/">Todos</a>
-          <% etiquetas.forEach(e => { %>
-            <a class="btn btn-sm <%= filtro === e.etiqueta ? 'btn-light' : 'btn-outline-light' %>" href="/?f=<%= e.etiqueta %>"><%= e.etiqueta %></a>
-          <% }) %>
-        </div>
+<section class="text-center my-5">
+  <div class="container">
+    <!-- 🖼 Imagen principal -->
+    <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" 
+         alt="Eliteflix portada"
+         class="img-fluid rounded-4 shadow-lg mb-4" 
+         style="max-height: 400px; object-fit: cover;">
+
+    <!-- 🧾 Título -->
+    <h1 class="display-5 fw-bold text-danger mb-3">Tu entretenimiento en un solo lugar</h1>
+    <p class="lead text-secondary mb-4">
+      Accede a Netflix, Spotify, Disney+, YouTube Premium, HBO Max y más.  
+      <br>Todo desde una sola plataforma con planes flexibles.
+    </p>
+
+    <!-- 🎯 Botones -->
+    <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
+      <% if (sess && sess.user) { %>
+        <a class="btn btn-danger px-4 py-2" href="/catalogo">Ver catálogo</a>
+        <a class="btn btn-outline-light px-4 py-2" href="/panel">Mi Panel</a>
+      <% } else { %>
+        <a class="btn btn-danger px-4 py-2" href="/login">Ingresar</a>
+        <a class="btn btn-outline-light px-4 py-2" href="/registro">Registrarse</a>
       <% } %>
     </div>
-  </div>
-  <div class="col-lg-6 text-center mt-4 mt-lg-0">
-    <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" class="img-fluid rounded-4 shadow-lg" alt="Hero">
-  </div>
-</div>
 
-<hr>
-
-<div class="row g-3">
-  <% productos.forEach(p => { %>
-    <div class="col-6 col-md-4 col-lg-3">
-      <div class="card h-100 bg-black border border-secondary rounded-4">
-        <% if (p.logo) { %>
-          <img src="<%= p.logo %>" class="card-img-top rounded-top-4">
-        <% } %>
-        <div class="card-body">
-          <span class="badge text-bg-danger mb-2"><%= p.etiqueta %></span>
-          <h6 class="card-title"><%= p.nombre %></h6>
-          <p class="card-text text-secondary">$<%= p.precio %> MXN</p>
-        </div>
-      </div>
+    <!-- 💬 Botones de Telegram -->
+    <div class="d-flex justify-content-center flex-wrap gap-3">
+      <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-outline-danger px-4 py-2">
+        💬 Soporte Telegram
+      </a>
+      <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-danger px-4 py-2">
+        📢 Canal Oficial
+      </a>
     </div>
-  <% }) %>
-</div>
+  </div>
+</section>
+
+<hr class="my-5 text-secondary">
+
+<section class="container text-center">
+  <h2 class="fw-bold text-danger mb-4">Plataformas disponibles</h2>
+
+  <div class="row g-3">
+    <% if (productos && productos.length) { %>
+      <% productos.forEach(p => { %>
+        <div class="col-6 col-md-3 col-lg-2">
+          <div class="card h-100 bg-black border border-secondary rounded-4 p-3 hover-shadow-sm">
+            <% if (p.logo) { %>
+              <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid mb-2" style="max-height: 60px; object-fit: contain;">
+            <% } %>
+            <h6 class="text-light small fw-semibold mb-0"><%= p.nombre %></h6>
+          </div>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <div class="col-12 text-secondary">
+        <p>No hay servicios disponibles por el momento.</p>
+      </div>
+    <% } %>
+  </div>
+</section>
