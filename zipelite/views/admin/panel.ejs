@@ -1,17 +1,23 @@
 <% var title = 'Panel Admin'; %>
 
-<!-- ✅ Enlace a Bootstrap Icons -->
+<!-- ✅ Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2 class="fw-bold text-danger">Panel de Administración</h2>
+  <h2 class="fw-bold text-danger">
+    <i class="bi bi-speedometer2 me-2"></i>Panel de Administración
+  </h2>
   <div>
-    <a href="/admin/cambiar-password" class="btn btn-warning me-2">Cambiar contraseña</a>
-    <a href="/admin/salir" class="btn btn-outline-light">Salir</a>
+    <a href="/admin/cambiar-password" class="btn btn-warning me-2">
+      <i class="bi bi-key-fill me-1"></i>Cambiar contraseña
+    </a>
+    <a href="/admin/salir" class="btn btn-outline-light">
+      <i class="bi bi-box-arrow-right me-1"></i>Salir
+    </a>
   </div>
 </div>
 
-<!-- 🔔 Mensajes globales -->
+<!-- 🔔 Mensajes -->
 <% if (ok) { %>
   <div class="alert alert-success border-0 rounded-4 shadow-sm d-flex align-items-center mt-2">
     <i class="bi bi-check-circle-fill fs-5 me-2"></i>
@@ -32,18 +38,18 @@
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Resumen</h5>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-graph-up-arrow me-2"></i>Resumen general</h5>
         <div class="row text-center">
           <div class="col">
-            <div class="h4">$<%= (totSaldo && totSaldo.s) ? totSaldo.s : 0 %></div>
+            <div class="fs-4 fw-bold text-light">$<%= (totSaldo && totSaldo.s) ? totSaldo.s : 0 %></div>
             <div class="text-secondary small">Saldo total clientes</div>
           </div>
           <div class="col">
-            <div class="h4">$<%= (totManualMes && totManualMes.s) ? totManualMes.s : 0 %></div>
+            <div class="fs-4 fw-bold text-light">$<%= (totManualMes && totManualMes.s) ? totManualMes.s : 0 %></div>
             <div class="text-secondary small">Ventas manuales (mes)</div>
           </div>
           <div class="col">
-            <div class="h4"><%= (totSubsAct && totSubsAct.c) ? totSubsAct.c : 0 %></div>
+            <div class="fs-4 fw-bold text-light"><%= (totSubsAct && totSubsAct.c) ? totSubsAct.c : 0 %></div>
             <div class="text-secondary small">Subs activas</div>
           </div>
         </div>
@@ -55,21 +61,13 @@
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Recargar saldo</h5>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-cash-coin me-2"></i>Recargar saldo</h5>
         <form class="row g-2" method="post" action="/admin/recargar">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <div class="col-md-4">
-            <input class="form-control" name="correo" type="email" placeholder="Correo usuario" required>
-          </div>
-          <div class="col-md-3">
-            <input class="form-control" name="monto" type="number" placeholder="Monto" required>
-          </div>
-          <div class="col-md-3">
-            <input class="form-control" name="nota" placeholder="Nota (opcional)">
-          </div>
-          <div class="col-md-2">
-            <button class="btn btn-danger w-100">Cargar</button>
-          </div>
+          <div class="col-md-4"><input class="form-control" name="correo" type="email" placeholder="Correo usuario" required></div>
+          <div class="col-md-3"><input class="form-control" name="monto" type="number" placeholder="Monto" required></div>
+          <div class="col-md-3"><input class="form-control" name="nota" placeholder="Nota (opcional)"></div>
+          <div class="col-md-2"><button class="btn btn-danger w-100">Cargar</button></div>
         </form>
       </div>
     </div>
@@ -79,31 +77,31 @@
   <div class="col-lg-12">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Usuarios recientes</h5>
-        <table class="table table-dark table-sm align-middle">
-          <thead>
-            <tr>
-              <th>ID</th><th>Nombre</th><th>Correo</th><th>Saldo</th><th>Activo</th><th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% usuarios.forEach(u => { %>
-              <tr>
-                <td><%= u.id %></td>
-                <td><%= u.nombre %> <%= u.apellido %></td>
-                <td><%= u.correo %></td>
-                <td>$<%= u.saldo %></td>
-                <td><%= u.activo ? '✅' : '❌' %></td>
-                <td>
-                  <form class="d-inline" method="post" action="/admin/cliente/<%= u.id %>/toggle">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button class="btn btn-sm btn-outline-light">Activar/Desactivar</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-people-fill me-2"></i>Usuarios recientes</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm align-middle mb-0">
+            <thead>
+              <tr><th>ID</th><th>Nombre</th><th>Correo</th><th>Saldo</th><th>Activo</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              <% usuarios.forEach(u => { %>
+                <tr>
+                  <td><%= u.id %></td>
+                  <td><%= u.nombre %> <%= u.apellido %></td>
+                  <td><%= u.correo %></td>
+                  <td>$<%= u.saldo %></td>
+                  <td><%= u.activo ? '✅' : '❌' %></td>
+                  <td>
+                    <form class="d-inline" method="post" action="/admin/cliente/<%= u.id %>/toggle">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-sm btn-outline-light">Activar/Desactivar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -112,35 +110,37 @@
   <div class="col-lg-12">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Productos</h5>
-        <table class="table table-dark table-sm align-middle">
-          <thead>
-            <tr><th>ID</th><th>Logo</th><th>Nombre</th><th>Etiqueta</th><th>Precio</th><th>Activo</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>
-            <% productos.forEach(p => { %>
-              <tr>
-                <td><%= p.id %></td>
-                <td><% if (p.logo) { %><img src="<%= p.logo %>" style="height:28px"><% } %></td>
-                <td><%= p.nombre %></td>
-                <td><%= p.etiqueta %></td>
-                <td>$<%= p.precio %></td>
-                <td><%= p.activo ? 'Sí' : 'No' %></td>
-                <td>
-                  <form class="d-inline" method="post" action="/admin/producto/<%= p.id %>/editar" enctype="multipart/form-data">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="hidden" name="nombre" value="<%= p.nombre %>">
-                    <input type="hidden" name="etiqueta" value="<%= p.etiqueta %>">
-                    <input type="hidden" name="precio" value="<%= p.precio %>">
-                    <input type="hidden" name="logo" value="<%= p.logo %>">
-                    <input type="hidden" name="activo" value="<%= p.activo ? 0 : 1 %>">
-                    <button class="btn btn-sm btn-outline-light">Activar/Desactivar</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-box-seam me-2"></i>Productos</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm align-middle mb-0">
+            <thead>
+              <tr><th>ID</th><th>Logo</th><th>Nombre</th><th>Etiqueta</th><th>Precio</th><th>Activo</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              <% productos.forEach(p => { %>
+                <tr>
+                  <td><%= p.id %></td>
+                  <td><% if (p.logo) { %><img src="<%= p.logo %>" style="height:28px" alt="logo"><% } %></td>
+                  <td><%= p.nombre %></td>
+                  <td><%= p.etiqueta %></td>
+                  <td>$<%= p.precio %></td>
+                  <td><%= p.activo ? '✅' : '❌' %></td>
+                  <td>
+                    <form class="d-inline" method="post" action="/admin/producto/<%= p.id %>/editar" enctype="multipart/form-data">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="hidden" name="nombre" value="<%= p.nombre %>">
+                      <input type="hidden" name="etiqueta" value="<%= p.etiqueta %>">
+                      <input type="hidden" name="precio" value="<%= p.precio %>">
+                      <input type="hidden" name="logo" value="<%= p.logo %>">
+                      <input type="hidden" name="activo" value="<%= p.activo ? 0 : 1 %>">
+                      <button class="btn btn-sm btn-outline-light">Activar/Desactivar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -149,7 +149,7 @@
   <div class="col-lg-12">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Cuentas disponibles</h5>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-person-vcard-fill me-2"></i>Cuentas disponibles</h5>
 
         <!-- Nueva cuenta -->
         <form class="row g-2 mb-3" method="post" action="/admin/cuenta/nueva">
@@ -165,41 +165,43 @@
           <div class="col-md-3"><input class="form-control" name="correo" placeholder="Correo cuenta" required></div>
           <div class="col-md-3"><input class="form-control" name="password" placeholder="Contraseña" required></div>
           <div class="col-md-2"><input class="form-control" name="cupos" type="number" placeholder="Cupos" value="1"></div>
-          <div class="col-md-2"><button class="btn btn-danger w-100">Añadir cuenta</button></div>
+          <div class="col-md-2"><button class="btn btn-danger w-100"><i class="bi bi-plus-circle me-1"></i>Añadir</button></div>
         </form>
 
-        <table class="table table-dark table-sm align-middle">
-          <thead>
-            <tr><th>ID</th><th>Servicio</th><th>Correo</th><th>Cupos</th><th>Usados</th><th>Activo</th><th>Acciones</th></tr>
-          </thead>
-          <tbody>
-            <% if (cuentas && cuentas.length) { %>
-              <% cuentas.forEach(c => { %>
-                <tr>
-                  <td><%= c.id %></td>
-                  <td><%= c.prod_nombre %></td>
-                  <td><%= c.correo %></td>
-                  <td><%= c.cupos %></td>
-                  <td><%= c.cupos_usados %></td>
-                  <td><%= c.activo ? '✅' : '❌' %></td>
-                  <td>
-                    <form class="d-inline" method="post" action="/admin/cuenta/<%= c.id %>/toggle">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                      <button class="btn btn-sm btn-outline-light">Activar/Desactivar</button>
-                    </form>
-                    <form class="d-inline" method="post" action="/admin/cuenta/<%= c.id %>/reactivar">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                      <input type="number" name="cupos" class="form-control form-control-sm d-inline-block text-center" style="width:70px" min="1" placeholder="Cupos">
-                      <button class="btn btn-sm btn-outline-warning ms-1">Reactivar</button>
-                    </form>
-                  </td>
-                </tr>
-              <% }) %>
-            <% } else { %>
-              <tr><td colspan="7" class="text-center text-secondary">No hay cuentas registradas.</td></tr>
-            <% } %>
-          </tbody>
-        </table>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm align-middle mb-0">
+            <thead>
+              <tr><th>ID</th><th>Servicio</th><th>Correo</th><th>Cupos</th><th>Usados</th><th>Activo</th><th>Acciones</th></tr>
+            </thead>
+            <tbody>
+              <% if (cuentas && cuentas.length) { %>
+                <% cuentas.forEach(c => { %>
+                  <tr>
+                    <td><%= c.id %></td>
+                    <td><%= c.prod_nombre %></td>
+                    <td><%= c.correo %></td>
+                    <td><%= c.cupos %></td>
+                    <td><%= c.cupos_usados %></td>
+                    <td><%= c.activo ? '✅' : '❌' %></td>
+                    <td>
+                      <form class="d-inline" method="post" action="/admin/cuenta/<%= c.id %>/toggle">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <button class="btn btn-sm btn-outline-light"><i class="bi bi-toggle-on me-1"></i>Activar/Desactivar</button>
+                      </form>
+                      <form class="d-inline" method="post" action="/admin/cuenta/<%= c.id %>/reactivar">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="number" name="cupos" class="form-control form-control-sm d-inline-block text-center" style="width:70px" min="1" placeholder="Cupos">
+                        <button class="btn btn-sm btn-outline-warning ms-1"><i class="bi bi-arrow-clockwise me-1"></i>Reactivar</button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" class="text-center text-secondary">No hay cuentas registradas.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -208,32 +210,32 @@
   <div class="col-lg-12">
     <div class="card bg-black border-secondary rounded-4 shadow-sm">
       <div class="card-body">
-        <h5>Cuentas vendidas</h5>
-        <table class="table table-dark table-sm align-middle">
-          <thead>
-            <tr>
-              <th>ID</th><th>Usuario</th><th>Servicio</th><th>Correo cuenta</th><th>Contraseña</th><th>Meses</th><th>Inicio</th><th>Vence</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% if (vendidas && vendidas.length) { %>
-              <% vendidas.forEach(v => { %>
-                <tr>
-                  <td><%= v.id %></td>
-                  <td><%= v.user_correo %></td>
-                  <td><%= v.prod_nombre %></td>
-                  <td><%= v.acc_correo %></td>
-                  <td><%= v.acc_password %></td>
-                  <td><%= v.meses %></td>
-                  <td><%= dayjs(v.start_at).format('DD/MM/YYYY') %></td>
-                  <td><%= dayjs(v.end_at).format('DD/MM/YYYY') %></td>
-                </tr>
-              <% }) %>
-            <% } else { %>
-              <tr><td colspan="8" class="text-center text-secondary">Aún no hay cuentas vendidas.</td></tr>
-            <% } %>
-          </tbody>
-        </table>
+        <h5 class="fw-semibold mb-3"><i class="bi bi-bag-check-fill me-2"></i>Cuentas vendidas</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-sm align-middle mb-0">
+            <thead>
+              <tr><th>ID</th><th>Usuario</th><th>Servicio</th><th>Correo cuenta</th><th>Contraseña</th><th>Meses</th><th>Inicio</th><th>Vence</th></tr>
+            </thead>
+            <tbody>
+              <% if (vendidas && vendidas.length) { %>
+                <% vendidas.forEach(v => { %>
+                  <tr>
+                    <td><%= v.id %></td>
+                    <td><%= v.user_correo %></td>
+                    <td><%= v.prod_nombre %></td>
+                    <td><%= v.acc_correo %></td>
+                    <td><%= v.acc_password %></td>
+                    <td><%= v.meses %></td>
+                    <td><%= dayjs(v.start_at).format('DD/MM/YYYY') %></td>
+                    <td><%= dayjs(v.end_at).format('DD/MM/YYYY') %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="8" class="text-center text-secondary">Aún no hay cuentas vendidas.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
