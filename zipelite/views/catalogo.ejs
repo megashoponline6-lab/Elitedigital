@@ -1,28 +1,28 @@
 <% var title = 'Catálogo'; %>
-<h2 class="mb-2">Catálogo</h2>
 
-<div class="mb-3">
-  <div class="btn-group flex-wrap">
-    <a class="btn btn-sm <%= !filtro ? 'btn-light' : 'btn-outline-light' %>" href="/catalogo">Todos</a>
-    <% etiquetas.forEach(e => { %>
-      <a class="btn btn-sm <%= filtro === e.etiqueta ? 'btn-light' : 'btn-outline-light' %>" href="/catalogo?f=<%= e.etiqueta %>"><%= e.etiqueta %></a>
+<section class="container">
+  <h2 class="mb-4 text-danger fw-bold">Catálogo</h2>
+
+  <div class="row g-3">
+    <% if (productos.length === 0) { %>
+      <div class="col-12 text-center text-secondary">
+        <p>No hay productos disponibles por el momento.</p>
+      </div>
+    <% } %>
+
+    <% productos.forEach(p => { %>
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="/comprar/<%= p.id %>" class="text-decoration-none">
+          <div class="card h-100 bg-black border border-secondary rounded-4 text-center p-3 hover-shadow-sm">
+            <% if (p.logo) { %>
+              <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid mb-3" style="max-height: 60px; object-fit: contain;">
+            <% } else { %>
+              <div class="bg-secondary rounded py-4 mb-3"></div>
+            <% } %>
+            <h6 class="text-light fw-semibold"><%= p.nombre %></h6>
+          </div>
+        </a>
+      </div>
     <% }) %>
   </div>
-</div>
-
-<div class="row g-3">
-  <% productos.forEach(p => { %>
-    <div class="col-6 col-md-4 col-lg-3">
-      <div class="card h-100 bg-black border border-secondary rounded-4">
-        <% if (p.logo) { %>
-          <img src="<%= p.logo %>" class="card-img-top rounded-top-4">
-        <% } %>
-        <div class="card-body">
-          <span class="badge text-bg-danger mb-2"><%= p.etiqueta %></span>
-          <h6 class="card-title"><%= p.nombre %></h6>
-          <p class="card-text text-secondary">$<%= p.precio %> MXN</p>
-        </div>
-      </div>
-    </div>
-  <% }) %>
-</div>
+</section>
