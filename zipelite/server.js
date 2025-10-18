@@ -1,3 +1,4 @@
+// ✅ server.js (versión completa con soporte para alertas visuales)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -102,9 +103,11 @@ if (c.c === 0) {
   }
 }
 
-// 🌐 Exponer sesión en vistas
+// 🌐 Exponer sesión + mensajes visuales en vistas
 app.use((req, res, next) => {
   res.locals.sess = req.session;
+  res.locals.ok = req.query.ok;
+  res.locals.error = req.query.error;
   next();
 });
 
@@ -157,7 +160,7 @@ app.post('/registro',
     if (existe) return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
     const passhash = await bcrypt.hash(password, 10);
     await run(`INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`, [nombre, apellido, pais, telefono || '', correo, passhash]);
-    res.redirect('/login?ok=1');
+    res.redirect('/login?ok=Registro completado');
   }
 );
 
@@ -177,11 +180,11 @@ app.post('/login',
     const ok = await bcrypt.compare(req.body.password, u.passhash);
     if (!ok) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
     req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
-    res.redirect('/panel');
+    res.redirect('/panel?ok=Bienvenido');
   }
 );
 
-app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/')));
+app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
 
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
@@ -206,7 +209,7 @@ app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), asy
     ticketId = t.lastID;
   }
   await run(`INSERT INTO ticket_messages (ticket_id, autor, mensaje) VALUES (?,?,?);`, [ticketId, 'cliente', req.body.mensaje]);
-  res.redirect('/panel#soporte');
+  res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
 // 🔑 Admin setup (solo primera vez)
@@ -220,7 +223,7 @@ app.post('/admin/setup', csrfProtection, body('usuario').notEmpty(), body('passw
   if (c.c > 0) return res.redirect('/admin');
   const passhash = await bcrypt.hash(req.body.password, 12);
   await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?);`, [req.body.usuario, passhash]);
-  res.redirect('/admin');
+  res.redirect('/admin?ok=Admin creado');
 });
 
 // 🧍‍♂️ Admin login
@@ -231,13 +234,13 @@ app.get('/admin', csrfProtection, async (req, res) => {
 });
 app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').notEmpty(), async (req, res) => {
   const a = await get(`SELECT * FROM admins WHERE usuario=?;`, [req.body.usuario]);
-  if (!a) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!a) return res.redirect('/admin?error=Credenciales');
   const ok = await bcrypt.compare(req.body.password, a.passhash);
-  if (!ok) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!ok) return res.redirect('/admin?error=Credenciales');
   req.session.admin = { id: a.id, usuario: a.usuario };
-  res.redirect('/admin/panel');
+  res.redirect('/admin/panel?ok=Bienvenido');
 });
-app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin'); });
+app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
 // 📊 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
@@ -286,11 +289,11 @@ app.post(
 
     const nuevaHash = await bcrypt.hash(nueva, 12);
     await run(`UPDATE admins SET passhash=? WHERE id=?;`, [nuevaHash, admin.id]);
-    res.render('admin/change-password', { csrfToken: req.csrfToken(), errores: [], ok: 'Contraseña actualizada correctamente ✅' });
+    res.redirect('/admin/panel?ok=Contraseña actualizada');
   }
 );
 
-// 🔄 Activar/desactivar productos ✅ (orden corregido)
+// 🔄 Activar/desactivar productos ✅
 app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   const { nombre, etiqueta, precio, activo, logo } = req.body;
   const activoVal = String(activo) === '1' ? 1 : 0;
@@ -298,15 +301,15 @@ app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), c
   if (req.file) logoField = `/public/uploads/${req.file.filename}`;
   await run(`UPDATE products SET nombre=?, etiqueta=?, precio=?, logo=?, activo=? WHERE id=?;`,
     [nombre, etiqueta, parseInt(precio), logoField, activoVal, parseInt(req.params.id)]);
-  res.redirect('/admin/panel?ok=editprod');
+  res.redirect('/admin/panel?ok=Producto actualizado');
 });
 
-// 🔥 Desactivar cliente en vez de borrar
+// 🔥 Desactivar cliente
 app.post('/admin/cliente/:id/toggle', requireAdmin, csrfProtection, async (req, res) => {
   const user = await get(`SELECT activo FROM users WHERE id=?;`, [parseInt(req.params.id)]);
   const nuevo = user.activo ? 0 : 1;
   await run(`UPDATE users SET activo=? WHERE id=?;`, [nuevo, parseInt(req.params.id)]);
-  res.redirect('/admin/panel?ok=user');
+  res.redirect('/admin/panel?ok=Usuario actualizado');
 });
 
 // 404
