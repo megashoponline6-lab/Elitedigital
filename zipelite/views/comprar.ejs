@@ -1,0 +1,44 @@
+<% var title = 'Comprar ' + prod.nombre; %>
+
+<section class="container py-4">
+  <div class="card bg-black border border-secondary rounded-4">
+    <div class="card-body">
+      <div class="row align-items-center">
+        <div class="col-md-4 text-center">
+          <% if (prod.logo) { %>
+            <img src="<%= prod.logo %>" alt="<%= prod.nombre %>" class="img-fluid mb-3" style="max-height: 120px; object-fit: contain;">
+          <% } else { %>
+            <div class="bg-secondary rounded py-5 mb-3"></div>
+          <% } %>
+        </div>
+        <div class="col-md-8">
+          <h2 class="text-danger fw-bold mb-3"><%= prod.nombre %></h2>
+          <p class="text-secondary">Selecciona la duración de tu suscripción y confirma tu compra. El costo total se descontará automáticamente de tu saldo.</p>
+
+          <form method="post" action="/comprar/<%= prod.id %>">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-6">
+                <label class="form-label">Duración</label>
+                <select class="form-select" name="meses" required>
+                  <option value="1">1 mes — $<%= prod.precio %> MXN</option>
+                  <option value="2">2 meses — $<%= prod.precio * 2 %> MXN</option>
+                  <option value="3">3 meses — $<%= prod.precio * 3 %> MXN</option>
+                </select>
+              </div>
+              <div class="col-md-6 text-end">
+                <button class="btn btn-danger px-4">Comprar</button>
+                <a href="/catalogo" class="btn btn-outline-light ms-2">Cancelar</a>
+              </div>
+            </div>
+          </form>
+
+          <div class="alert alert-dark mt-4 small text-secondary border-secondary">
+            💡 <strong>Nota:</strong> Al completar la compra, se te asignará una cuenta disponible de <%= prod.nombre %>.  
+            Podrás ver las credenciales entregadas en tu panel personal.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
