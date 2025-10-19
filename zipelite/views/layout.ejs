@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>
-    Eliteflix<%= (typeof title !== 'undefined' && title) ? ' - ' + title : '' %>
+    <%= appName %><%= (typeof title !== 'undefined' && title) ? ' - ' + title : '' %>
   </title>
 
   <!-- ✅ Bootstrap CSS -->
@@ -19,11 +19,13 @@
       position: sticky;
       top: 0;
       z-index: 1050;
-      background: #000;
-      backdrop-filter: blur(6px);
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(8px);
       transition: all 0.3s ease;
     }
-    .navbar.scrolled { box-shadow: 0 2px 10px rgba(220,53,69,0.3); }
+    .navbar.scrolled {
+      box-shadow: 0 2px 10px rgba(220,53,69,0.3);
+    }
 
     footer {
       border-top: 1px solid rgba(220,53,69,0.3);
@@ -46,6 +48,13 @@
     .navbar-dark .navbar-nav .nav-link:hover {
       color: #dc3545 !important;
     }
+
+    .alert {
+      font-weight: 500;
+      border-left: 5px solid;
+    }
+    .alert-success { border-color: #198754; }
+    .alert-danger { border-color: #dc3545; }
   </style>
 </head>
 
@@ -54,41 +63,66 @@
   <!-- 🔝 Navbar -->
   <nav class="navbar navbar-expand-lg navbar-dark border-bottom border-danger shadow-sm">
     <div class="container">
-      <a class="navbar-brand fw-bold text-danger" href="/">Éliteflix</a>
+      <a class="navbar-brand fw-bold text-danger" href="/">Eliteflix</a>
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
         <span class="navbar-toggler-icon"></span>
       </button>
       <div class="collapse navbar-collapse" id="nav">
         <ul class="navbar-nav me-auto">
           <% if (sess && sess.user) { %>
-            <li class="nav-item"><a class="nav-link" href="/catalogo"><i class="bi bi-grid me-1"></i>Catálogo</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="/catalogo"><i class="bi bi-grid me-1"></i>Catálogo</a>
+            </li>
           <% } %>
         </ul>
+
         <ul class="navbar-nav">
           <% if (sess && sess.admin) { %>
-            <li class="nav-item"><a class="nav-link" href="/admin/panel"><i class="bi bi-speedometer2 me-1"></i>Panel Admin</a></li>
-            <li class="nav-item"><a class="nav-link" href="/admin/logout"><i class="bi bi-box-arrow-right me-1"></i>Salir</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/panel"><i class="bi bi-speedometer2 me-1"></i>Panel Admin</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/cuenta/nueva"><i class="bi bi-plus-circle me-1"></i>Nueva Cuenta</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-danger" href="/admin/logout"><i class="bi bi-box-arrow-right me-1"></i>Salir</a>
+            </li>
+
           <% } else if (sess && sess.user) { %>
-            <li class="nav-item"><a class="nav-link" href="/panel"><i class="bi bi-person-circle me-1"></i>Mi Panel</a></li>
-            <li class="nav-item"><a class="nav-link" href="/logout"><i class="bi bi-door-closed me-1"></i>Salir</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="/panel"><i class="bi bi-person-circle me-1"></i>Mi Panel</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-danger" href="/logout"><i class="bi bi-door-closed me-1"></i>Salir</a>
+            </li>
+
           <% } else { %>
-            <li class="nav-item"><a class="nav-link" href="/login"><i class="bi bi-box-arrow-in-right me-1"></i>Ingresar</a></li>
-            <li class="nav-item"><a class="nav-link" href="/registro"><i class="bi bi-person-plus me-1"></i>Registro</a></li>
-            <li class="nav-item"><a class="nav-link" href="/admin/login"><i class="bi bi-lock-fill me-1"></i>Admin</a></li>
+            <li class="nav-item">
+              <a class="nav-link" href="/login"><i class="bi bi-box-arrow-in-right me-1"></i>Ingresar</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/registro"><i class="bi bi-person-plus me-1"></i>Registro</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="/admin/login"><i class="bi bi-lock-fill me-1"></i>Admin</a>
+            </li>
           <% } %>
         </ul>
       </div>
     </div>
   </nav>
 
+  <!-- 🧱 Contenido principal -->
   <main class="container my-4">
     <%- body %>
   </main>
 
+  <!-- ⚙️ Footer -->
   <footer class="text-center text-secondary py-4 small mt-4">
-    © <%= new Date().getFullYear() %> Éliteflix — Todos los derechos reservados
+    © <%= new Date().getFullYear() %> <%= appName %> — Todos los derechos reservados
   </footer>
 
+  <!-- ✅ Bootstrap Bundle -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <script>
@@ -96,6 +130,7 @@
       const params = new URLSearchParams(window.location.search);
       const ok = params.get('ok');
       const error = params.get('error');
+
       function showAlert(type, message, icon) {
         const alert = document.createElement('div');
         alert.className = \`alert alert-\${type} alert-dismissible fade show alert-float shadow-lg border-0\`;
@@ -106,10 +141,12 @@
         document.body.appendChild(alert);
         setTimeout(() => alert.remove(), 6000);
       }
+
       if (ok) showAlert('success', ok, 'bi-check-circle-fill');
       if (error) showAlert('danger', error, 'bi-exclamation-triangle-fill');
     })();
 
+    // Navbar scroll effect
     window.addEventListener('scroll', () => {
       const nav = document.querySelector('.navbar');
       if (window.scrollY > 20) nav.classList.add('scrolled');
