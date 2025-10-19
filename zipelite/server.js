@@ -1,4 +1,4 @@
-// ✅ server.js (completo con buscador + contadores + catálogo privado + compras + recarga)
+// ✅ server.js (versión corregida y completa)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -120,7 +120,9 @@ app.get('/', async (req, res, next) => {
       ? await all(`SELECT * FROM products WHERE activo=1 AND etiqueta=? ORDER BY nombre;`, [filtro])
       : await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('home', { productos, etiquetas, filtro });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 // 🔒 Catálogo
@@ -128,14 +130,74 @@ app.get('/catalogo', requireAuth, async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('catalogo', { productos, etiquetas: [], filtro: '' });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
-// 🧍 Registro/Login/Logout igual que antes...
-// (no se tocan esas rutas para mantener compatibilidad)
+// 🧍 Registro
+app.get('/registro', csrfProtection, (req, res) =>
+  res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
+);
 
+app.post(
+  '/registro',
+  csrfProtection,
+  body('nombre').notEmpty(),
+  body('apellido').notEmpty(),
+  body('pais').notEmpty(),
+  body('correo').isEmail(),
+  body('password').isLength({ min: 6 }),
+  async (req, res) => {
+    const errores = validationResult(req);
+    if (!errores.isEmpty())
+      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
 
-// 📊 Panel Admin actualizado con búsqueda + contadores
+    const { nombre, apellido, pais, telefono, password } = req.body;
+    const correo = req.body.correo.trim().toLowerCase();
+
+    const existe = await get(`SELECT id FROM users WHERE lower(correo)=?;`, [correo]);
+    if (existe)
+      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
+
+    const passhash = await bcrypt.hash(password, 10);
+    await run(
+      `INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`,
+      [nombre, apellido, pais, telefono || '', correo, passhash]
+    );
+    res.redirect('/login?ok=Registro completado');
+  }
+);
+
+// 👤 Login
+app.get('/login', csrfProtection, (req, res) =>
+  res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
+);
+
+app.post(
+  '/login',
+  csrfProtection,
+  body('correo').isEmail(),
+  body('password').notEmpty(),
+  async (req, res) => {
+    const correo = req.body.correo.trim().toLowerCase();
+    const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
+    if (!u)
+      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
+
+    const ok = await bcrypt.compare(req.body.password, u.passhash);
+    if (!ok)
+      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+
+    req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
+    res.redirect('/panel?ok=Bienvenido');
+  }
+);
+
+// 🚪 Logout
+app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
+
+// 📊 Panel Admin con buscador + contadores
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const q = (req.query.q || '').trim().toLowerCase();
@@ -143,35 +205,27 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
     let usuarios, productos, cuentas, vendidas;
     if (q) {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users 
-        WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ?
-        ORDER BY id DESC;`, [`%${q}%`, `%${q}%`, `%${q}%`]);
+        WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`, `%${q}%`]);
       productos = await all(`SELECT * FROM products 
-        WHERE lower(nombre) LIKE ? OR lower(etiqueta) LIKE ? 
-        ORDER BY id DESC;`, [`%${q}%`, `%${q}%`]);
-      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre
-        FROM accounts a LEFT JOIN products p ON p.id=a.product_id
-        WHERE lower(a.correo) LIKE ? OR lower(p.nombre) LIKE ?
-        ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
+        WHERE lower(nombre) LIKE ? OR lower(etiqueta) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`]);
+      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a 
+        LEFT JOIN products p ON p.id=a.product_id
+        WHERE lower(a.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
       vendidas = await all(`SELECT a.id, u.correo AS user_correo, p.nombre AS prod_nombre, acc.correo AS acc_correo, acc.password AS acc_password,
-        a.meses, a.start_at, a.end_at
-        FROM allocations a
+        a.meses, a.start_at, a.end_at FROM allocations a
         LEFT JOIN users u ON u.id=a.user_id
         LEFT JOIN products p ON p.id=a.product_id
         LEFT JOIN accounts acc ON acc.id=a.account_id
-        WHERE lower(u.correo) LIKE ? OR lower(p.nombre) LIKE ?
-        ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
+        WHERE lower(u.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
     } else {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users ORDER BY id DESC LIMIT 15;`);
       productos = await all(`SELECT * FROM products ORDER BY id DESC LIMIT 50;`);
-      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a 
-        LEFT JOIN products p ON p.id=a.product_id ORDER BY a.id DESC LIMIT 100;`);
+      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a LEFT JOIN products p ON p.id=a.product_id ORDER BY a.id DESC LIMIT 100;`);
       vendidas = await all(`SELECT a.id, u.correo AS user_correo, p.nombre AS prod_nombre, acc.correo AS acc_correo, acc.password AS acc_password,
-        a.meses, a.start_at, a.end_at
-        FROM allocations a
+        a.meses, a.start_at, a.end_at FROM allocations a
         LEFT JOIN users u ON u.id=a.user_id
         LEFT JOIN products p ON p.id=a.product_id
-        LEFT JOIN accounts acc ON acc.id=a.account_id
-        ORDER BY a.id DESC LIMIT 100;`);
+        LEFT JOIN accounts acc ON acc.id=a.account_id ORDER BY a.id DESC LIMIT 100;`);
     }
 
     // 🔢 Contadores globales
@@ -194,13 +248,13 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 💰 Recargar saldo, editar producto, cuentas, etc (sin cambios)
+// 💰 Recargar saldo
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   const { correo, monto, nota } = req.body;
   const cantidad = parseInt(monto);
   if (!correo || !cantidad || cantidad <= 0) return res.redirect('/admin/panel?error=datos');
 
-  const user = await get(`SELECT id, saldo FROM users WHERE lower(correo)=?;`, [String(correo).trim().toLowerCase()]);
+  const user = await get(`SELECT id, saldo FROM users WHERE lower(correo)=?;`, [correo.trim().toLowerCase()]);
   if (!user) return res.redirect('/admin/panel?error=nouser');
 
   const nuevoSaldo = (user.saldo || 0) + cantidad;
@@ -209,8 +263,6 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   res.redirect('/admin/panel?ok=recarga');
 });
 
-// Resto de rutas admin (toggle, reactivar, etc) sin cambios...
-
 // 404 y 500
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res, next) => {
@@ -218,5 +270,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Error Interno del Servidor');
 });
 
+// 🚀 Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
