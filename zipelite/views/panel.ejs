@@ -1,7 +1,7 @@
 <% var title = 'Mi Panel'; %>
+
 <h2 class="mb-3">Hola, <%= user.nombre %> 👋</h2>
 
-<!-- Mensajes de confirmación -->
 <% if (ok) { %>
   <div class="alert alert-success"><%= ok %></div>
 <% } %>
@@ -10,53 +10,42 @@
 <% } %>
 
 <div class="row g-3">
-
-  <!-- 🧾 DATOS DEL USUARIO -->
   <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
         <h5 class="fw-bold text-danger">Mis datos</h5>
-        <p class="mb-1"><strong>Nombre:</strong> <%= user.nombre %> <%= user.apellido %></p>
-        <p class="mb-1"><strong>País:</strong> <%= user.pais %></p>
-        <p class="mb-1"><strong>Correo:</strong> <%= user.correo %></p>
+        <p><strong>Nombre:</strong> <%= user.nombre %> <%= user.apellido %></p>
+        <p><strong>País:</strong> <%= user.pais %></p>
+        <p><strong>Correo:</strong> <%= user.correo %></p>
         <% if (user.telefono) { %>
-          <p class="mb-1"><strong>Teléfono:</strong> <%= user.telefono %></p>
+          <p><strong>Teléfono:</strong> <%= user.telefono %></p>
         <% } %>
         <p class="display-6 text-success mt-3">Saldo: $<%= user.saldo %> MXN</p>
-        <div class="mt-3">
-          <a href="/catalogo" class="btn btn-danger btn-sm w-100">Comprar suscripción</a>
-        </div>
+        <a href="/catalogo" class="btn btn-danger btn-sm w-100 mt-3">Comprar suscripción</a>
       </div>
     </div>
   </div>
 
-  <!-- 🗓️ SUSCRIPCIÓN ACTIVA -->
   <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
-        <h5 class="fw-bold text-danger">Suscripción activa</h5>
-        <% if (sub) { %>
-          <p class="mb-1"><strong>Servicio:</strong> <%= sub.prod_nombre %></p>
-          <p class="mb-1">
-            <strong>Vence:</strong> <%= dayjs(sub.vence_en).format('DD/MM/YYYY') %>
-            <% if (dias !== null) { %>
-              <span class="badge text-bg-warning ms-2"><%= dias %> días</span>
-            <% } %>
-          </p>
-          <div class="alert alert-warning mt-2 small">
-            Te avisaremos cuando la fecha esté cerca.
-          </div>
+        <h5 class="fw-bold text-danger">Suscripciones</h5>
+        <% if (subs && subs.length) { %>
+          <ul class="list-group list-group-flush">
+            <% subs.forEach(s => { %>
+              <li class="list-group-item bg-black text-light border-secondary">
+                <strong><%= s.producto %></strong><br>
+                Vence: <%= dayjs(s.vence_en).format('DD/MM/YYYY') %>
+              </li>
+            <% }) %>
+          </ul>
         <% } else { %>
-          <div class="alert alert-secondary small mb-0">
-            No tienes una suscripción activa aún.<br>
-            <a href="/catalogo" class="text-danger">Compra una para comenzar.</a>
-          </div>
+          <p class="text-secondary small mb-0">Aún no tienes suscripciones activas.</p>
         <% } %>
       </div>
     </div>
   </div>
 
-  <!-- 🔐 CREDENCIALES ENTREGADAS -->
   <div class="col-md-4">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
@@ -64,14 +53,7 @@
         <% if (asignaciones && asignaciones.length) { %>
           <div class="table-responsive">
             <table class="table table-dark table-sm align-middle mb-0">
-              <thead>
-                <tr>
-                  <th>Servicio</th>
-                  <th>Correo</th>
-                  <th>Contraseña</th>
-                  <th>Vence</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Servicio</th><th>Correo</th><th>Contraseña</th><th>Vence</th></tr></thead>
               <tbody>
                 <% asignaciones.forEach(a => { %>
                   <tr>
@@ -90,17 +72,10 @@
       </div>
     </div>
   </div>
-
 </div>
 
 <hr class="my-4">
-
-<!-- 🔗 Botones de acción -->
 <div class="text-center">
-  <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-outline-danger me-2">
-    💬 Soporte Telegram
-  </a>
-  <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-danger">
-    📢 Canal Oficial
-  </a>
+  <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-outline-danger me-2">💬 Soporte Telegram</a>
+  <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-danger">📢 Canal Oficial</a>
 </div>
