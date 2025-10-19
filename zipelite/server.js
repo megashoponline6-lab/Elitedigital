@@ -1,4 +1,4 @@
-// ✅ server.js (versión con CRUD de cuentas admin y logout corregido)
+// ✅ server.js (versión final con csrfToken corregido y logout admin incluido)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -197,12 +197,12 @@ app.get('/panel', requireAuth, async (req, res, next) => {
   }
 });
 
-// 🛒 Comprar producto
-app.get('/comprar/:id', requireAuth, async (req, res, next) => {
+// 🛒 Comprar producto (✅ csrfToken corregido)
+app.get('/comprar/:id', requireAuth, csrfProtection, async (req, res, next) => {
   try {
     const producto = await get(`SELECT * FROM products WHERE id=? AND activo=1;`, [req.params.id]);
     if (!producto) return res.status(404).render('404');
-    res.render('comprar', { producto });
+    res.render('comprar', { producto, csrfToken: req.csrfToken() });
   } catch (err) {
     next(err);
   }
@@ -225,14 +225,14 @@ app.post('/admin/login', csrfProtection, async (req, res) => {
   res.redirect('/admin/panel');
 });
 
-// 🚪 Logout admin (✅ corrección)
+// 🚪 Logout admin
 app.get('/admin/logout', (req, res) => {
   req.session.destroy(() => {
     res.redirect('/admin/login?ok=Sesión cerrada');
   });
 });
 
-// 📊 Panel admin
+// 📊 Panel admin y CRUD
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const q = (req.query.q || '').trim().toLowerCase();
