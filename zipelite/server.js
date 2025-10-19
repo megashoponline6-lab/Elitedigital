@@ -1,4 +1,4 @@
-// ✅ server.js (versión con CRUD de cuentas admin)
+// ✅ server.js (versión con CRUD de cuentas admin y logout corregido)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -169,64 +169,28 @@ app.post(
   }
 );
 
-// 👤 Login
+// 👤 Login / Logout usuario
 app.get('/login', csrfProtection, (req, res) =>
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
 );
-
-app.post(
-  '/login',
-  csrfProtection,
-  body('correo').isEmail(),
-  body('password').notEmpty(),
-  async (req, res) => {
-    const correo = req.body.correo.trim().toLowerCase();
-    const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
-    if (!u)
-      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
-
-    const ok = await bcrypt.compare(req.body.password, u.passhash);
-    if (!ok)
-      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
-
-    req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
-    res.redirect('/panel?ok=Bienvenido');
-  }
-);
-
-// 🚪 Logout
+app.post('/login', csrfProtection, async (req, res) => {
+  const correo = req.body.correo.trim().toLowerCase();
+  const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
+  if (!u) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  const ok = await bcrypt.compare(req.body.password, u.passhash);
+  if (!ok) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
+  res.redirect('/panel?ok=Bienvenido');
+});
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
 
 // 👤 Panel usuario
 app.get('/panel', requireAuth, async (req, res, next) => {
   try {
     const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
-
-    const asignaciones = await all(`
-      SELECT a.id, p.nombre AS producto, acc.correo, acc.password, a.end_at AS vence
-      FROM allocations a
-      LEFT JOIN products p ON p.id = a.product_id
-      LEFT JOIN accounts acc ON acc.id = a.account_id
-      WHERE a.user_id = ?
-      ORDER BY a.id DESC;
-    `, [user.id]);
-
-    const subs = await all(`
-      SELECT s.*, p.nombre AS producto 
-      FROM subscriptions s 
-      LEFT JOIN products p ON p.id = s.product_id 
-      WHERE s.user_id = ? 
-      ORDER BY s.id DESC;
-    `, [user.id]);
-
-    res.render('panel', {
-      title: 'Mi Panel',
-      user,
-      asignaciones: asignaciones || [],
-      subs: subs || [],
-      ok: req.query.ok,
-      error: req.query.error
-    });
+    const asignaciones = await all(`SELECT a.id, p.nombre AS producto, acc.correo, acc.password, a.end_at AS vence FROM allocations a LEFT JOIN products p ON p.id=a.product_id LEFT JOIN accounts acc ON acc.id=a.account_id WHERE a.user_id=? ORDER BY a.id DESC;`, [user.id]);
+    const subs = await all(`SELECT s.*, p.nombre AS producto FROM subscriptions s LEFT JOIN products p ON p.id=s.product_id WHERE s.user_id=? ORDER BY s.id DESC;`, [user.id]);
+    res.render('panel', { title: 'Mi Panel', user, asignaciones, subs, ok: req.query.ok, error: req.query.error });
   } catch (err) {
     console.error('❌ Error cargando /panel:', err);
     next(err);
@@ -252,11 +216,20 @@ app.get('/admin/login', csrfProtection, (req, res) =>
 app.post('/admin/login', csrfProtection, async (req, res) => {
   const { usuario, password } = req.body;
   const admin = await get(`SELECT * FROM admins WHERE lower(usuario)=?;`, [usuario.trim().toLowerCase()]);
-  if (!admin) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!admin)
+    return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
   const ok = await bcrypt.compare(password, admin.passhash);
-  if (!ok) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!ok)
+    return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
   req.session.admin = { id: admin.id, usuario: admin.usuario };
   res.redirect('/admin/panel');
+});
+
+// 🚪 Logout admin (✅ corrección)
+app.get('/admin/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/admin/login?ok=Sesión cerrada');
+  });
 });
 
 // 📊 Panel admin
@@ -268,7 +241,8 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
     if (q) {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users 
         WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`, `%${q}%`]);
-      productos = await all(`SELECT * FROM products WHERE lower(nombre) LIKE ? OR lower(etiqueta) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`]);
+      productos = await all(`SELECT * FROM products 
+        WHERE lower(nombre) LIKE ? OR lower(etiqueta) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`]);
       cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a 
         LEFT JOIN products p ON p.id=a.product_id
         WHERE lower(a.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
@@ -320,31 +294,26 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   res.redirect('/admin/panel?ok=recarga');
 });
 
-// 🧩 Crear nueva cuenta
+// 🧩 CRUD de cuentas
 app.get('/admin/cuenta/nueva', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('admin/cuenta_nueva', { csrfToken: req.csrfToken(), productos, ok: req.query.ok, error: req.query.error });
   } catch (err) {
-    console.error('❌ Error cargando formulario de cuenta nueva:', err);
     next(err);
   }
 });
-
 app.post('/admin/cuenta/nueva', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { product_id, correo, password, notas, cupos } = req.body;
     if (!product_id || !correo || !password) return res.redirect('/admin/cuenta/nueva?error=Faltan+datos');
     await run(`INSERT INTO accounts (product_id, correo, password, notas, cupos) VALUES (?,?,?,?,?);`,
       [product_id, correo.trim(), password.trim(), notas || '', cupos || 1]);
-    res.redirect('/admin/panel?ok=Cuenta+creada+correctamente');
+    res.redirect('/admin/panel?ok=Cuenta+creada');
   } catch (err) {
-    console.error('❌ Error al crear cuenta nueva:', err);
-    res.redirect('/admin/cuenta/nueva?error=Error+al+crear+la+cuenta');
+    res.redirect('/admin/cuenta/nueva?error=Error+al+crear');
   }
 });
-
-// ✏️ Editar cuenta existente
 app.get('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const cuenta = await get(`SELECT * FROM accounts WHERE id=?;`, [req.params.id]);
@@ -352,11 +321,9 @@ app.get('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, re
     const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('admin/cuenta_editar', { csrfToken: req.csrfToken(), cuenta, productos });
   } catch (err) {
-    console.error('❌ Error cargando cuenta para editar:', err);
     next(err);
   }
 });
-
 app.post('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { product_id, correo, password, notas, cupos, activo } = req.body;
@@ -364,7 +331,6 @@ app.post('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, r
       [product_id, correo.trim(), password.trim(), notas || '', cupos || 1, activo ? 1 : 0, req.params.id]);
     res.redirect('/admin/panel?ok=Cuenta+actualizada');
   } catch (err) {
-    console.error('❌ Error al actualizar cuenta:', err);
     res.redirect(`/admin/cuenta/editar/${req.params.id}?error=Error+al+guardar`);
   }
 });
