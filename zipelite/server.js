@@ -64,7 +64,7 @@ function requireAuth(req, res, next) {
   next();
 }
 function requireAdmin(req, res, next) {
-  if (!req.session.admin) return res.redirect('/admin');
+  if (!req.session.admin) return res.redirect('/admin/login');
   next();
 }
 
@@ -197,12 +197,53 @@ app.post(
 // 🚪 Logout
 app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
 
-// 📊 Panel Admin con buscador + contadores
+// 👤 Panel de usuario (corregido)
+app.get('/panel', requireAuth, async (req, res, next) => {
+  try {
+    const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
+    const subs = await all(`SELECT s.*, p.nombre AS producto FROM subscriptions s LEFT JOIN products p ON p.id=s.product_id WHERE s.user_id=?;`, [user.id]);
+    res.render('panel', { user, subs });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 🛒 Comprar producto (corregido)
+app.get('/comprar/:id', requireAuth, async (req, res, next) => {
+  try {
+    const producto = await get(`SELECT * FROM products WHERE id=? AND activo=1;`, [req.params.id]);
+    if (!producto) return res.status(404).render('404');
+    res.render('comprar', { producto });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// 👑 Login de administrador (corregido)
+app.get('/admin', (req, res) => res.redirect('/admin/login'));
+
+app.get('/admin/login', csrfProtection, (req, res) =>
+  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
+);
+
+app.post('/admin/login', csrfProtection, async (req, res) => {
+  const { usuario, password } = req.body;
+  const admin = await get(`SELECT * FROM admins WHERE lower(usuario)=?;`, [usuario.trim().toLowerCase()]);
+  if (!admin) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+
+  const ok = await bcrypt.compare(password, admin.passhash);
+  if (!ok) return res.status(400).render('admin/login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+
+  req.session.admin = { id: admin.id, usuario: admin.usuario };
+  res.redirect('/admin/panel');
+});
+
+// 📊 Panel Admin (ya existente)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const q = (req.query.q || '').trim().toLowerCase();
-
     let usuarios, productos, cuentas, vendidas;
+
     if (q) {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users 
         WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`, `%${q}%`]);
@@ -228,7 +269,6 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
         LEFT JOIN accounts acc ON acc.id=a.account_id ORDER BY a.id DESC LIMIT 100;`);
     }
 
-    // 🔢 Contadores globales
     const totSaldo = await get(`SELECT SUM(saldo) as s FROM users;`);
     const totManualMes = await get(`SELECT SUM(monto) as s FROM manual_sales WHERE strftime('%Y-%m', fecha)=strftime('%Y-%m','now');`);
     const totSubsAct = await get(`SELECT COUNT(*) as c FROM subscriptions WHERE date(vence_en) >= date('now');`);
@@ -263,7 +303,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   res.redirect('/admin/panel?ok=recarga');
 });
 
-// 404 y 500
+// ⚠️ 404 y 500
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res, next) => {
   console.error('❌ Error interno:', err);
