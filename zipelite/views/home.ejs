@@ -1,45 +1,36 @@
-<% layout = 'layout' %>
-<% var title = 'Inicio'; %>
+<% var title = 'Administrador'; %>
 
-<div class="row align-items-center">
-  <div class="col-lg-6">
-    <h1 class="display-5 fw-bold">Todo tu entretenimiento en un solo lugar.</h1>
-    <p class="lead text-secondary">Series, películas y música con planes flexibles.</p>
-    <div class="btn-group mb-3">
-      <a class="btn btn-danger" href="/catalogo">Ver catálogo</a>
-      <a class="btn btn-outline-danger" href="/admin">Admin</a>
-    </div>
-    <div class="mb-2">
-      <% if (etiquetas && etiquetas.length) { %>
-        <div class="btn-group flex-wrap">
-          <a class="btn btn-sm <%= !filtro ? 'btn-light' : 'btn-outline-light' %>" href="/">Todos</a>
-          <% etiquetas.forEach(e => { %>
-            <a class="btn btn-sm <%= filtro === e.etiqueta ? 'btn-light' : 'btn-outline-light' %>" href="/?f=<%= e.etiqueta %>"><%= e.etiqueta %></a>
-          <% }) %>
-        </div>
-      <% } %>
-    </div>
-  </div>
-  <div class="col-lg-6 text-center mt-4 mt-lg-0">
-    <img src="/public/img/imagen_whatsapp_9237d2e4.jpg" class="img-fluid rounded-4 shadow-lg" alt="Hero">
-  </div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="fw-bold text-danger">Acceso de Administrador</h2>
 </div>
 
-<hr>
+<!-- 🔔 Mensajes de error -->
+<% if (errores && errores.length) { %>
+  <div class="alert alert-danger">
+    <% errores.forEach(e => { %>
+      <div><%= e.msg %></div>
+    <% }) %>
+  </div>
+<% } %>
 
-<div class="row g-3">
-  <% productos.forEach(p => { %>
-    <div class="col-6 col-md-4 col-lg-3">
-      <div class="card h-100 bg-black border border-secondary rounded-4">
-        <% if (p.logo) { %>
-          <img src="<%= p.logo %>" class="card-img-top rounded-top-4">
-        <% } %>
-        <div class="card-body">
-          <span class="badge text-bg-danger mb-2"><%= p.etiqueta %></span>
-          <h6 class="card-title"><%= p.nombre %></h6>
-          <p class="card-text text-secondary">$<%= p.precio %> MXN</p>
-        </div>
-      </div>
+<div class="card bg-black border border-secondary rounded-4 shadow-lg p-4 mt-3">
+  <form method="post">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <div class="mb-3">
+      <label class="form-label text-light">Usuario</label>
+      <input name="usuario" class="form-control bg-dark text-light border-secondary" placeholder="Correo o usuario" required>
     </div>
-  <% }) %>
-</div> claro que si ahi esta
+
+    <div class="mb-3">
+      <label class="form-label text-light">Contraseña</label>
+      <input type="password" name="password" class="form-control bg-dark text-light border-secondary" placeholder="********" required>
+    </div>
+
+    <button class="btn btn-danger w-100 mt-2 py-2">Iniciar sesión</button>
+  </form>
+</div>
+
+<p class="text-secondary small mt-3 text-center">
+  ¿Primera vez? Configura tu cuenta en  
+  <a href="/admin/setup" class="text-danger text-decoration-none">/admin/setup</a>.
+</p>
