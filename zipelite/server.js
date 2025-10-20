@@ -21,7 +21,7 @@ dotenv.config();
 const app = express();
 app.set('trust proxy', 1);
 
-// 📁 Rutas de archivos
+// 📁 Directorios
 const ROOT = process.cwd();
 const DATA_DIR = path.join(ROOT, 'data');
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -35,7 +35,7 @@ const SQLiteStore = SQLiteStoreFactory(session);
 // 🖼️ Subida de imágenes (productos)
 const upload = multer({
   dest: UPLOADS_DIR,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 // 🧠 Vistas y layouts
@@ -99,12 +99,6 @@ await run(`CREATE TABLE IF NOT EXISTS users (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );`);
 
-/* 🔄 Nueva definición de products:
-   - nombre, descripcion
-   - precio1, precio2, precio3 (1M/2M/3M)
-   - logo (ruta de imagen subida)
-   - cupos_total y cupos_usados
-*/
 await run(`CREATE TABLE IF NOT EXISTS products (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   nombre TEXT,
@@ -175,7 +169,7 @@ if (adminCount.c === 0) {
   console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
 }
 
-// 🌐 Sesión y mensajes (para layout)
+// 🌐 Sesión y mensajes
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -183,7 +177,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Home (muestra carrusel de logos si existen)
+// 🏠 Home
 app.get('/', async (req, res, next) => {
   try {
     const productos = await all(`SELECT id, nombre, logo FROM products WHERE activo=1 ORDER BY id DESC LIMIT 36;`);
@@ -193,7 +187,7 @@ app.get('/', async (req, res, next) => {
   }
 });
 
-// 🔒 Catálogo (con 1M/2M/3M y cupos)
+// 🔒 Catálogo
 app.get('/catalogo', requireAuth, csrfProtection, async (req, res, next) => {
   try {
     const productos = await all(`
@@ -250,9 +244,11 @@ app.get('/login', csrfProtection, (req, res) =>
 app.post('/login', csrfProtection, async (req, res) => {
   const correo = (req.body.correo || '').trim().toLowerCase();
   const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
-  if (!u) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!u)
+    return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
   const ok = await bcrypt.compare(req.body.password, u.passhash);
-  if (!ok) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+  if (!ok)
+    return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
   req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
   res.redirect('/panel?ok=Bienvenido');
 });
@@ -263,7 +259,6 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Se
 app.get('/panel', requireAuth, async (req, res, next) => {
   try {
     const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
-
     const asignaciones = await all(`
       SELECT a.id, p.nombre AS producto, acc.correo, acc.password, a.meses, a.start_at, a.end_at
       FROM allocations a
@@ -272,7 +267,6 @@ app.get('/panel', requireAuth, async (req, res, next) => {
       WHERE a.user_id=?
       ORDER BY a.id DESC;
     `, [user.id]);
-
     const subs = await all(`
       SELECT s.*, p.nombre AS producto
       FROM subscriptions s
@@ -280,38 +274,27 @@ app.get('/panel', requireAuth, async (req, res, next) => {
       WHERE s.user_id=?
       ORDER BY s.id DESC;
     `, [user.id]);
-
     res.render('panel', { title: 'Mi Panel', user, asignaciones, subs, ok: req.query.ok, error: req.query.error });
   } catch (err) {
-    console.error('❌ Error cargando /panel:', err);
     next(err);
   }
 });
 
-// 🛒 Confirmar compra (POST) — descuenta saldo y asigna cuenta disponible
+// 🛒 Compra con descuento de saldo
 app.post('/comprar/:id', requireAuth, csrfProtection, async (req, res) => {
   try {
     const meses = parseInt(req.body.meses, 10);
     if (![1, 2, 3].includes(meses)) return res.redirect('/catalogo?error=Meses+inválidos');
-
     const producto = await get(`SELECT * FROM products WHERE id=? AND activo=1;`, [req.params.id]);
     if (!producto) return res.redirect('/catalogo?error=Producto+no+disponible');
-
-    // Precio según meses
     const precio = meses === 1 ? producto.precio1 : meses === 2 ? producto.precio2 : producto.precio3;
     if (!precio || precio <= 0) return res.redirect('/catalogo?error=Precio+no+configurado');
-
-    // Cupos disponibles a nivel producto
     const disponibles = (producto.cupos_total || 0) - (producto.cupos_usados || 0);
-    if (disponibles <= 0) return res.redirect('/catalogo?error=Sin+cupones+disponibles');
-
-    // Usuario y saldo
+    if (disponibles <= 0) return res.redirect('/catalogo?error=Sin+cuentas+disponibles');
     const user = await get(`SELECT id, saldo FROM users WHERE id=? AND activo=1;`, [req.session.user.id]);
     if (!user) return res.redirect('/login');
-
     if ((user.saldo || 0) < precio) return res.redirect('/catalogo?error=Saldo+insuficiente');
 
-    // Buscar una cuenta física para asignar (si existe)
     const cuenta = await get(`
       SELECT id, correo, password, cupos, cupos_usados
       FROM accounts
@@ -320,43 +303,29 @@ app.post('/comprar/:id', requireAuth, csrfProtection, async (req, res) => {
       LIMIT 1;
     `, [producto.id]);
 
-    if (!cuenta) {
-      return res.redirect('/catalogo?error=No+hay+cuentas+disponibles');
-    }
+    if (!cuenta) return res.redirect('/catalogo?error=No+hay+cuentas+disponibles');
 
-    // Descontar saldo del usuario
     const nuevoSaldo = (user.saldo || 0) - precio;
     await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, user.id]);
-
-    // Registrar venta (positivo = cobro)
     await run(`INSERT INTO manual_sales (user_id, descripcion, monto) VALUES (?,?,?);`,
       [user.id, `Compra ${producto.nombre} (${meses}M)`, precio]);
-
-    // Marcar cupo tomado en account y product
     await run(`UPDATE accounts SET cupos_usados = cupos_usados + 1 WHERE id=?;`, [cuenta.id]);
     await run(`UPDATE products SET cupos_usados = cupos_usados + 1 WHERE id=?;`, [producto.id]);
-
-    // Crear allocation con fecha de vencimiento
-    const start = dayjs();
-    const end = start.add(meses, 'month').format('YYYY-MM-DD');
-    await run(`INSERT INTO allocations (user_id, product_id, account_id, meses, start_at, end_at)
-               VALUES (?,?,?,?,datetime('now'),?);`,
-      [user.id, producto.id, cuenta.id, meses, end]);
-
+    const end = dayjs().add(meses, 'month').format('YYYY-MM-DD');
+    await run(`INSERT INTO allocations (user_id, product_id, account_id, meses, end_at)
+               VALUES (?,?,?,?,?);`, [user.id, producto.id, cuenta.id, meses, end]);
     res.redirect('/panel?ok=Compra+confirmada');
   } catch (err) {
-    console.error('❌ Error al procesar compra:', err);
+    console.error('❌ Error compra:', err);
     res.redirect('/catalogo?error=Error+al+procesar');
   }
 });
 
 // 👑 Admin login
 app.get('/admin', (req, res) => res.redirect('/admin/login'));
-
 app.get('/admin/login', csrfProtection, (req, res) =>
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
 );
-
 app.post('/admin/login', csrfProtection, async (req, res) => {
   const { usuario, password } = req.body;
   const admin = await get(`SELECT * FROM admins WHERE lower(usuario)=?;`, [usuario.trim().toLowerCase()]);
@@ -368,172 +337,130 @@ app.post('/admin/login', csrfProtection, async (req, res) => {
   req.session.admin = { id: admin.id, usuario: admin.usuario };
   res.redirect('/admin/panel');
 });
+app.get('/admin/logout', (req, res) => req.session.destroy(() => res.redirect('/admin/login?ok=Sesión cerrada')));
 
-// 🚪 Logout admin
-app.get('/admin/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/admin/login?ok=Sesión cerrada');
-  });
-});
-
-// 📊 Panel admin (resumen rápido)
+// 📊 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const q = (req.query.q || '').trim().toLowerCase();
     let usuarios, productos, cuentas, vendidas;
-
     if (q) {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users 
-        WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`, `%${q}%`]);
-      productos = await all(`SELECT * FROM products 
-        WHERE lower(nombre) LIKE ? OR lower(descripcion) LIKE ? ORDER BY id DESC;`, [`%${q}%`, `%${q}%`]);
+        WHERE lower(nombre) LIKE ? OR lower(apellido) LIKE ? OR lower(correo) LIKE ? ORDER BY id DESC;`,
+        [`%${q}%`, `%${q}%`, `%${q}%`]);
+      productos = await all(`SELECT * FROM products WHERE lower(nombre) LIKE ? OR lower(descripcion) LIKE ? ORDER BY id DESC;`,
+        [`%${q}%`, `%${q}%`]);
       cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a 
         LEFT JOIN products p ON p.id=a.product_id
-        WHERE lower(a.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
+        WHERE lower(a.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`,
+        [`%${q}%`, `%${q}%`]);
       vendidas = await all(`SELECT a.id, u.correo AS user_correo, p.nombre AS prod_nombre, acc.correo AS acc_correo, acc.password AS acc_password,
         a.meses, a.start_at, a.end_at FROM allocations a
         LEFT JOIN users u ON u.id=a.user_id
         LEFT JOIN products p ON p.id=a.product_id
         LEFT JOIN accounts acc ON acc.id=a.account_id
-        WHERE lower(u.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`, [`%${q}%`, `%${q}%`]);
+        WHERE lower(u.correo) LIKE ? OR lower(p.nombre) LIKE ? ORDER BY a.id DESC;`,
+        [`%${q}%`, `%${q}%`]);
     } else {
       usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users ORDER BY id DESC LIMIT 15;`);
       productos = await all(`SELECT * FROM products ORDER BY id DESC LIMIT 50;`);
-      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a LEFT JOIN products p ON p.id=a.product_id ORDER BY a.id DESC LIMIT 100;`);
+      cuentas = await all(`SELECT a.*, p.nombre AS prod_nombre FROM accounts a 
+        LEFT JOIN products p ON p.id=a.product_id ORDER BY a.id DESC LIMIT 100;`);
       vendidas = await all(`SELECT a.id, u.correo AS user_correo, p.nombre AS prod_nombre, acc.correo AS acc_correo, acc.password AS acc_password,
         a.meses, a.start_at, a.end_at FROM allocations a
         LEFT JOIN users u ON u.id=a.user_id
         LEFT JOIN products p ON p.id=a.product_id
         LEFT JOIN accounts acc ON acc.id=a.account_id ORDER BY a.id DESC LIMIT 100;`);
     }
-
     const totSaldo = await get(`SELECT SUM(saldo) as s FROM users;`);
     const totManualMes = await get(`SELECT SUM(monto) as s FROM manual_sales WHERE strftime('%Y-%m', fecha)=strftime('%Y-%m','now');`);
-    const totSubsAct = await get(`SELECT COUNT(*) as c FROM subscriptions WHERE date(vence_en) >= date('now');`);
     const cuentasActivas = (await get(`SELECT COUNT(*) as c FROM accounts WHERE activo=1;`)).c || 0;
     const cuentasVendidas = (await get(`SELECT COUNT(*) as c FROM allocations;`)).c || 0;
-
     res.render('admin/panel', {
       csrfToken: req.csrfToken(),
       q, usuarios, productos, cuentas, vendidas,
-      totSaldo, totManualMes, totSubsAct,
-      cuentasActivas, cuentasVendidas
+      totSaldo, totManualMes, cuentasActivas, cuentasVendidas
     });
   } catch (err) {
-    console.error('❌ Error cargando admin/panel:', err);
     next(err);
   }
 });
 
-// 🆕 Admin: Alta de producto (con imagen + precios 1/2/3 + cupos)
+// 🆕 Alta y edición de productos
 app.get('/admin/producto/nuevo', requireAdmin, csrfProtection, async (req, res) => {
-  res.render('admin/producto_nuevo', {
-    csrfToken: req.csrfToken(),
-    ok: req.query.ok,
-    error: req.query.error
-  });
+  res.render('admin/producto_nuevo', { csrfToken: req.csrfToken(), ok: req.query.ok, error: req.query.error });
 });
-
-app.post(
-  '/admin/producto/nuevo',
-  requireAdmin,
-  upload.single('logo'),
-  csrfProtection,
-  async (req, res) => {
-    try {
-      const { nombre, descripcion, precio1, precio2, precio3, cupos_total } = req.body;
-
-      if (!nombre || !precio1) {
-        return res.redirect('/admin/producto/nuevo?error=Faltan+datos');
-      }
-
-      let logoPath = '';
-      if (req.file) {
-        // Guardar como ruta pública
-        logoPath = `/public/uploads/${req.file.filename}`;
-      }
-
-      await run(
-        `INSERT INTO products (nombre, descripcion, precio1, precio2, precio3, logo, cupos_total, cupos_usados, activo)
-         VALUES (?,?,?,?,?,?,?,?,1);`,
-        [
-          nombre.trim(),
-          (descripcion || '').trim(),
-          parseInt(precio1 || 0, 10) || 0,
-          parseInt(precio2 || 0, 10) || 0,
-          parseInt(precio3 || 0, 10) || 0,
-          logoPath,
-          parseInt(cupos_total || 0, 10) || 0,
-          0
-        ]
-      );
-
-      res.redirect('/admin/panel?ok=Producto+creado');
-    } catch (err) {
-      console.error('❌ Error creando producto:', err);
-      res.redirect('/admin/producto/nuevo?error=No+se+pudo+crear');
-    }
-  }
-);
-
-// (Opcional) Borrar todos los productos — ÚSALO CON CUIDADO
-app.post('/admin/productos/limpiar', requireAdmin, csrfProtection, async (req, res) => {
+app.post('/admin/producto/nuevo', requireAdmin, upload.single('logo'), csrfProtection, async (req, res) => {
   try {
-    await run(`DELETE FROM products;`);
-    res.redirect('/admin/panel?ok=Productos+eliminados');
-  } catch (e) {
-    res.redirect('/admin/panel?error=No+se+puedo+limpiar');
+    const { nombre, descripcion, precio1, precio2, precio3, cupos_total } = req.body;
+    if (!nombre || !precio1) return res.redirect('/admin/producto/nuevo?error=Faltan+datos');
+    const logoPath = req.file ? `/public/uploads/${req.file.filename}` : '';
+    await run(`INSERT INTO products (nombre, descripcion, precio1, precio2, precio3, logo, cupos_total, activo)
+               VALUES (?,?,?,?,?,?,?,1);`,
+      [nombre, descripcion, precio1, precio2 || 0, precio3 || 0, logoPath, cupos_total || 0]);
+    res.redirect('/admin/panel?ok=Producto+creado');
+  } catch {
+    res.redirect('/admin/producto/nuevo?error=Error+al+crear');
   }
 });
-
-// ✏️ CRUD cuentas existente (por si usas pool de cuentas manual)
-app.get('/admin/cuenta/nueva', requireAdmin, csrfProtection, async (req, res, next) => {
+app.get('/admin/producto/editar/:id', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
-    const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
-    res.render('admin/cuenta_nueva', { csrfToken: req.csrfToken(), productos, ok: req.query.ok, error: req.query.error });
+    const producto = await get(`SELECT * FROM products WHERE id=?;`, [req.params.id]);
+    if (!producto) return res.status(404).render('404');
+    res.render('admin/producto_editar', { csrfToken: req.csrfToken(), producto, ok: req.query.ok, error: req.query.error });
   } catch (err) {
     next(err);
   }
+});
+app.post('/admin/producto/editar/:id', requireAdmin, upload.single('logo'), csrfProtection, async (req, res) => {
+  try {
+    const { nombre, descripcion, precio1, precio2, precio3, cupos_total, activo } = req.body;
+    if (!nombre || !precio1) return res.redirect(`/admin/producto/editar/${req.params.id}?error=Faltan+campos`);
+    const prev = await get(`SELECT logo FROM products WHERE id=?;`, [req.params.id]);
+    const logoPath = req.file ? `/public/uploads/${req.file.filename}` : prev.logo;
+    await run(`UPDATE products SET nombre=?, descripcion=?, precio1=?, precio2=?, precio3=?, logo=?, cupos_total=?, activo=? WHERE id=?;`,
+      [nombre, descripcion, precio1, precio2 || 0, precio3 || 0, logoPath, cupos_total || 0, activo ? 1 : 0, req.params.id]);
+    res.redirect('/admin/panel?ok=Producto+actualizado');
+  } catch {
+    res.redirect(`/admin/producto/editar/${req.params.id}?error=Error+al+guardar`);
+  }
+});
+
+// CRUD cuentas
+app.get('/admin/cuenta/nueva', requireAdmin, csrfProtection, async (req, res) => {
+  const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
+  res.render('admin/cuenta_nueva', { csrfToken: req.csrfToken(), productos });
 });
 app.post('/admin/cuenta/nueva', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { product_id, correo, password, notas, cupos } = req.body;
     if (!product_id || !correo || !password) return res.redirect('/admin/cuenta/nueva?error=Faltan+datos');
     await run(`INSERT INTO accounts (product_id, correo, password, notas, cupos) VALUES (?,?,?,?,?);`,
-      [product_id, (correo || '').trim(), (password || '').trim(), notas || '', parseInt(cupos || 1, 10) || 1]);
+      [product_id, correo, password, notas || '', parseInt(cupos || 1)]);
     res.redirect('/admin/panel?ok=Cuenta+creada');
-  } catch (err) {
+  } catch {
     res.redirect('/admin/cuenta/nueva?error=Error+al+crear');
   }
 });
-app.get('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, res, next) => {
-  try {
-    const cuenta = await get(`SELECT * FROM accounts WHERE id=?;`, [req.params.id]);
-    if (!cuenta) return res.status(404).render('404');
-    const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
-    res.render('admin/cuenta_editar', { csrfToken: req.csrfToken(), cuenta, productos });
-  } catch (err) {
-    next(err);
-  }
+app.get('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, res) => {
+  const cuenta = await get(`SELECT * FROM accounts WHERE id=?;`, [req.params.id]);
+  const productos = await all(`SELECT id, nombre FROM products WHERE activo=1 ORDER BY nombre;`);
+  res.render('admin/cuenta_editar', { csrfToken: req.csrfToken(), cuenta, productos });
 });
 app.post('/admin/cuenta/editar/:id', requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    const { product_id, correo, password, notas, cupos, activo } = req.body;
-    await run(`UPDATE accounts SET product_id=?, correo=?, password=?, notas=?, cupos=?, activo=? WHERE id=?;`,
-      [product_id, (correo || '').trim(), (password || '').trim(), notas || '', parseInt(cupos || 1, 10) || 1, activo ? 1 : 0, req.params.id]);
-    res.redirect('/admin/panel?ok=Cuenta+actualizada');
-  } catch (err) {
-    res.redirect(`/admin/cuenta/editar/${req.params.id}?error=Error+al+guardar`);
-  }
+  const { product_id, correo, password, notas, cupos, activo } = req.body;
+  await run(`UPDATE accounts SET product_id=?, correo=?, password=?, notas=?, cupos=?, activo=? WHERE id=?;`,
+    [product_id, correo, password, notas, parseInt(cupos || 1), activo ? 1 : 0, req.params.id]);
+  res.redirect('/admin/panel?ok=Cuenta+actualizada');
 });
 
-// ⚠️ 404 y 500
+// ⚠️ 404 / 500
 app.use((req, res) => res.status(404).render('404'));
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error('❌ Error interno:', err);
   res.status(500).send('Error Interno del Servidor');
 });
 
 // 🚀 Servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
