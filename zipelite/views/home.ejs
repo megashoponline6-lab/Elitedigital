@@ -1,152 +1,45 @@
 <% layout = 'layout' %>
 <% var title = 'Inicio'; %>
 
-<style>
-  body {
-    /* ✅ Imagen corregida */
-    background: url('/public/img/imagen_whatsapp_9237d2e4.jpg') center center / cover no-repeat fixed;
-    min-height: 100vh;
-    color: #fff;
-    position: relative;
-    overflow-x: hidden;
-  }
-
-  .overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(10, 0, 0, 0.82);
-    backdrop-filter: blur(5px);
-    z-index: 0;
-  }
-
-  .hero {
-    position: relative;
-    z-index: 1;
-    text-align: center;
-    padding: 8rem 1rem 6rem;
-  }
-
-  .hero h1 {
-    font-weight: 800;
-    font-size: 3.2rem;
-    letter-spacing: 1px;
-    color: #ff1a2a;
-    text-shadow: 0 0 25px rgba(255, 0, 40, 0.7);
-  }
-
-  .hero p {
-    color: #ddd;
-    font-size: 1.2rem;
-    max-width: 600px;
-    margin: 0 auto;
-  }
-
-  .btn-custom {
-    font-size: 1.1rem;
-    padding: 0.8rem 1.6rem;
-    border-radius: 50px;
-    transition: all 0.3s ease;
-  }
-
-  .btn-custom i {
-    margin-right: 0.4rem;
-  }
-
-  .btn-blue {
-    background-color: #0088cc;
-    color: #fff;
-  }
-
-  .btn-blue:hover {
-    background-color: #0a9be6;
-  }
-
-  .btn-red {
-    background-color: #dc3545;
-    color: #fff;
-  }
-
-  .btn-red:hover {
-    background-color: #ff4757;
-  }
-
-  .btn-outline-light:hover {
-    background-color: #fff;
-    color: #000;
-  }
-
-  .platform-card {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-  }
-
-  .platform-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0 25px rgba(255, 0, 40, 0.3);
-  }
-</style>
-
-<!-- 🔴 Fondo oscuro con imagen -->
-<div class="overlay"></div>
-
-<section class="hero container">
-  <!-- 🧾 Título -->
-  <h1 class="mb-3">Tu entretenimiento en un solo lugar</h1>
-  <p class="lead mb-4">
-    Accede a Netflix, Spotify, Disney+, YouTube Premium, HBO Max y más.  
-    Todo desde una sola plataforma con planes flexibles.
-  </p>
-
-  <!-- 🎯 Botones principales -->
-  <div class="d-flex justify-content-center flex-wrap gap-3 mb-4">
-    <% if (sess && sess.user) { %>
-      <a class="btn btn-danger btn-custom" href="/catalogo">
-        <i class="bi bi-grid-fill"></i> Ver catálogo
-      </a>
-      <a class="btn btn-outline-light btn-custom" href="/panel">
-        <i class="bi bi-person-fill"></i> Mi Panel
-      </a>
-    <% } else { %>
-      <a class="btn btn-danger btn-custom" href="/login">
-        <i class="bi bi-box-arrow-in-right"></i> Ingresar
-      </a>
-      <a class="btn btn-outline-light btn-custom" href="/registro">
-        <i class="bi bi-person-plus-fill"></i> Registrarse
-      </a>
-    <% } %>
-  </div>
-
-  <!-- 💬 Botones de Telegram -->
-  <div class="d-flex justify-content-center flex-wrap gap-3 mt-3">
-    <a href="https://t.me/soporteeliteflix" target="_blank" class="btn btn-blue btn-custom shadow">
-      <i class="bi bi-telegram"></i> Soporte en Telegram
-    </a>
-    <a href="https://t.me/+2FVmdvbVt1czMjFh" target="_blank" class="btn btn-red btn-custom shadow">
-      <i class="bi bi-broadcast"></i> Canal de Telegram
-    </a>
-  </div>
-</section>
-
-<hr class="my-5 text-secondary">
-
-<section class="container text-center pb-5">
-  <h2 class="fw-bold text-danger mb-4">Plataformas disponibles</h2>
-
-  <div class="row g-3">
-    <% if (productos && productos.length) { %>
-      <% productos.forEach(p => { %>
-        <div class="col-6 col-md-3 col-lg-2">
-          <div class="card h-100 bg-black border border-secondary rounded-4 p-3 platform-card">
-            <% if (p.logo) { %>
-              <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid mb-2" style="max-height: 60px; object-fit: contain;">
-            <% } %>
-            <h6 class="text-light small fw-semibold mb-0"><%= p.nombre %></h6>
-          </div>
+<div class="row align-items-center">
+  <div class="col-lg-6">
+    <h1 class="display-5 fw-bold">Todo tu entretenimiento en un solo lugar.</h1>
+    <p class="lead text-secondary">Series, películas y música con planes flexibles.</p>
+    <div class="btn-group mb-3">
+      <a class="btn btn-danger" href="/catalogo">Ver catálogo</a>
+      <a class="btn btn-outline-danger" href="/admin">Admin</a>
+    </div>
+    <div class="mb-2">
+      <% if (etiquetas && etiquetas.length) { %>
+        <div class="btn-group flex-wrap">
+          <a class="btn btn-sm <%= !filtro ? 'btn-light' : 'btn-outline-light' %>" href="/">Todos</a>
+          <% etiquetas.forEach(e => { %>
+            <a class="btn btn-sm <%= filtro === e.etiqueta ? 'btn-light' : 'btn-outline-light' %>" href="/?f=<%= e.etiqueta %>"><%= e.etiqueta %></a>
+          <% }) %>
         </div>
-      <% }) %>
-    <% } else { %>
-      <div class="col-12 text-secondary">
-        <p>No hay servicios disponibles por el momento.</p>
-      </div>
-    <% } %>
+      <% } %>
+    </div>
   </div>
-</section>
+  <div class="col-lg-6 text-center mt-4 mt-lg-0">
+    <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" class="img-fluid rounded-4 shadow-lg" alt="Hero">
+  </div>
+</div>
+
+<hr>
+
+<div class="row g-3">
+  <% productos.forEach(p => { %>
+    <div class="col-6 col-md-4 col-lg-3">
+      <div class="card h-100 bg-black border border-secondary rounded-4">
+        <% if (p.logo) { %>
+          <img src="<%= p.logo %>" class="card-img-top rounded-top-4">
+        <% } %>
+        <div class="card-body">
+          <span class="badge text-bg-danger mb-2"><%= p.etiqueta %></span>
+          <h6 class="card-title"><%= p.nombre %></h6>
+          <p class="card-text text-secondary">$<%= p.precio %> MXN</p>
+        </div>
+      </div>
+    </div>
+  <% }) %>
+</div> claro que si ahi esta
