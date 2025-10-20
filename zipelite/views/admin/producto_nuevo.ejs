@@ -1,59 +1,76 @@
 <% layout = 'layout' %>
 <% var title = 'Nuevo producto'; %>
 
-<section class="container">
-  <h2 class="mb-4 text-danger fw-bold">Agregar producto</h2>
+<div class="container my-5">
+  <div class="card bg-dark border-secondary shadow-lg rounded-4 mx-auto" style="max-width: 700px;">
+    <div class="card-body text-light">
+      <h3 class="fw-bold text-danger mb-3">
+        <i class="bi bi-plus-circle me-2"></i>Agregar nuevo producto
+      </h3>
 
-  <% if (typeof error !== 'undefined' && error) { %>
-    <div class="alert alert-danger"><%= error %></div>
-  <% } %>
-  <% if (typeof ok !== 'undefined' && ok) { %>
-    <div class="alert alert-success"><%= ok %></div>
-  <% } %>
+      <% if (ok) { %>
+        <div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i><%= ok %></div>
+      <% } %>
+      <% if (error) { %>
+        <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i><%= error %></div>
+      <% } %>
 
-  <form class="card p-3 bg-black border border-secondary rounded-4" method="post" action="/admin/producto/nuevo" enctype="multipart/form-data">
-    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <form method="post" enctype="multipart/form-data" autocomplete="off" action="/admin/producto/nuevo">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Nombre *</label>
-        <input name="nombre" class="form-control" required>
-      </div>
+        <!-- Nombre -->
+        <div class="mb-3">
+          <label class="form-label">Nombre del producto *</label>
+          <input name="nombre" class="form-control bg-dark text-light border-secondary" required>
+        </div>
 
-      <div class="col-md-6">
-        <label class="form-label">Imagen (logo)</label>
-        <input type="file" name="logo" accept="image/*" class="form-control">
-        <small class="text-secondary">Se guardará en /public/uploads</small>
-      </div>
+        <!-- Descripción -->
+        <div class="mb-3">
+          <label class="form-label">Descripción</label>
+          <textarea name="descripcion" class="form-control bg-dark text-light border-secondary" rows="3" placeholder="Detalle breve visible en el catálogo"></textarea>
+        </div>
 
-      <div class="col-12">
-        <label class="form-label">Descripción</label>
-        <textarea name="descripcion" class="form-control" rows="3" placeholder="Detalle breve visible en el catálogo"></textarea>
-      </div>
+        <!-- Imagen -->
+        <div class="mb-3">
+          <label class="form-label">Imagen (logo)</label>
+          <input type="file" name="logo" accept="image/*" class="form-control bg-dark text-light border-secondary">
+          <small class="text-secondary">Se guardará en <code>/public/uploads</code></small>
+        </div>
 
-      <div class="col-md-4">
-        <label class="form-label">Precio 1 mes *</label>
-        <input type="number" name="precio1" class="form-control" min="0" step="1" required>
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Precio 2 meses</label>
-        <input type="number" name="precio2" class="form-control" min="0" step="1">
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Precio 3 meses</label>
-        <input type="number" name="precio3" class="form-control" min="0" step="1">
-      </div>
+        <!-- Precios -->
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Precio 1 mes *</label>
+            <input type="number" name="precio1" class="form-control bg-dark text-light border-secondary" min="0" step="1" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Precio 2 meses</label>
+            <input type="number" name="precio2" class="form-control bg-dark text-light border-secondary" min="0" step="1">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Precio 3 meses</label>
+            <input type="number" name="precio3" class="form-control bg-dark text-light border-secondary" min="0" step="1">
+          </div>
+        </div>
 
-      <div class="col-md-4">
-        <label class="form-label">Cupos totales</label>
-        <input type="number" name="cupos_total" class="form-control" min="0" step="1" value="0">
-        <small class="text-secondary">Cupos disponibles = totales - usados</small>
+        <!-- Cupos -->
+        <div class="mt-3 mb-3">
+          <label class="form-label">Cupos totales</label>
+          <input type="number" name="cupos_total" class="form-control bg-dark text-light border-secondary" min="0" step="1" value="0">
+          <small class="text-secondary">Cupos disponibles = totales - usados</small>
+        </div>
+
+        <!-- Botones -->
+        <button class="btn btn-danger w-100 py-2 mt-2">
+          <i class="bi bi-save2-fill me-1"></i>Guardar producto
+        </button>
+      </form>
+
+      <div class="text-center mt-3">
+        <a href="/admin/panel" class="text-secondary small text-decoration-none">
+          ← Volver al panel
+        </a>
       </div>
     </div>
-
-    <div class="mt-3 d-flex gap-2">
-      <button class="btn btn-danger">Guardar</button>
-      <a class="btn btn-outline-light" href="/admin/panel">Cancelar</a>
-    </div>
-  </form>
-</section>
+  </div>
+</div>
