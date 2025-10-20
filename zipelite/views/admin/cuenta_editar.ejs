@@ -1,10 +1,11 @@
-<% var title = 'Editar cuenta'; %>
+<% layout = 'layout' %>
+<% var title = 'Editar producto'; %>
 
 <div class="container my-5">
-  <div class="card bg-dark border-secondary shadow-lg rounded-4 mx-auto" style="max-width: 600px;">
+  <div class="card bg-dark border-secondary shadow-lg rounded-4 mx-auto" style="max-width: 700px;">
     <div class="card-body text-light">
       <h3 class="fw-bold text-warning mb-3">
-        <i class="bi bi-pencil-square me-2"></i>Editar cuenta existente
+        <i class="bi bi-pencil-square me-2"></i>Editar producto
       </h3>
 
       <% if (ok) { %>
@@ -14,41 +15,48 @@
         <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i><%= error %></div>
       <% } %>
 
-      <form method="post" autocomplete="off">
+      <form method="post" enctype="multipart/form-data" autocomplete="off">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
         <div class="mb-3">
-          <label class="form-label">Producto</label>
-          <select name="product_id" class="form-select bg-dark text-light border-secondary" required>
-            <% productos.forEach(p => { %>
-              <option value="<%= p.id %>" <%= (p.id === cuenta.product_id) ? 'selected' : '' %>><%= p.nombre %></option>
-            <% }) %>
-          </select>
+          <label class="form-label">Nombre del producto *</label>
+          <input name="nombre" value="<%= producto.nombre %>" class="form-control bg-dark text-light border-secondary" required>
         </div>
 
         <div class="mb-3">
-          <label class="form-label">Correo</label>
-          <input name="correo" value="<%= cuenta.correo %>" class="form-control bg-dark text-light border-secondary" required>
+          <label class="form-label">Descripción</label>
+          <textarea name="descripcion" class="form-control bg-dark text-light border-secondary" rows="3"><%= producto.etiqueta || '' %></textarea>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Contraseña</label>
-          <input type="text" name="password" value="<%= cuenta.password %>" class="form-control bg-dark text-light border-secondary" required>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Precio 1 mes *</label>
+            <input type="number" name="precio1" value="<%= producto.precio1 || producto.precio %>" class="form-control bg-dark text-light border-secondary" required>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Precio 2 meses</label>
+            <input type="number" name="precio2" value="<%= producto.precio2 || 0 %>" class="form-control bg-dark text-light border-secondary">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Precio 3 meses</label>
+            <input type="number" name="precio3" value="<%= producto.precio3 || 0 %>" class="form-control bg-dark text-light border-secondary">
+          </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Notas</label>
-          <textarea name="notas" class="form-control bg-dark text-light border-secondary" rows="2"><%= cuenta.notas || '' %></textarea>
+        <div class="mt-3">
+          <label class="form-label">Imagen actual</label><br>
+          <% if (producto.logo) { %>
+            <img src="<%= producto.logo %>" alt="logo" class="rounded shadow mb-2" style="max-height:100px;">
+          <% } else { %>
+            <span class="text-secondary">Sin imagen</span>
+          <% } %>
+          <input type="file" name="logo" accept="image/*" class="form-control bg-dark text-light border-secondary mt-2">
+          <small class="text-secondary">Si subes una nueva, reemplazará la anterior.</small>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Cupos</label>
-          <input type="number" name="cupos" value="<%= cuenta.cupos %>" class="form-control bg-dark text-light border-secondary" min="1">
-        </div>
-
-        <div class="form-check form-switch mb-3">
-          <input class="form-check-input" type="checkbox" name="activo" id="activo" value="1" <%= cuenta.activo ? 'checked' : '' %>>
-          <label class="form-check-label" for="activo">Cuenta activa</label>
+        <div class="form-check form-switch mt-3 mb-3">
+          <input class="form-check-input" type="checkbox" name="activo" id="activo" value="1" <%= producto.activo ? 'checked' : '' %>>
+          <label class="form-check-label" for="activo">Producto activo</label>
         </div>
 
         <button class="btn btn-warning w-100 py-2">
