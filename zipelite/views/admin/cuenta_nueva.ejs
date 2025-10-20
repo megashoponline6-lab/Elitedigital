@@ -1,3 +1,4 @@
+<% layout = 'layout' %>
 <% var title = 'Nueva cuenta'; %>
 
 <div class="container my-5">
@@ -8,17 +9,23 @@
       </h3>
 
       <% if (ok) { %>
-        <div class="alert alert-success"><i class="bi bi-check-circle-fill me-1"></i><%= ok %></div>
-      <% } %>
-      <% if (error) { %>
-        <div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill me-1"></i><%= error %></div>
+        <div class="alert alert-success border-0 rounded-3">
+          <i class="bi bi-check-circle-fill me-2"></i><%= ok %>
+        </div>
       <% } %>
 
-      <form method="post" autocomplete="off">
+      <% if (error) { %>
+        <div class="alert alert-danger border-0 rounded-3">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i><%= error %>
+        </div>
+      <% } %>
+
+      <form method="post" autocomplete="off" action="/admin/cuenta/nueva">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
+        <!-- Producto -->
         <div class="mb-3">
-          <label class="form-label">Producto</label>
+          <label class="form-label fw-semibold">Producto *</label>
           <select name="product_id" class="form-select bg-dark text-light border-secondary" required>
             <option value="">Selecciona un producto</option>
             <% productos.forEach(p => { %>
@@ -27,27 +34,33 @@
           </select>
         </div>
 
+        <!-- Correo -->
         <div class="mb-3">
-          <label class="form-label">Correo de la cuenta</label>
+          <label class="form-label fw-semibold">Correo de la cuenta *</label>
           <input name="correo" class="form-control bg-dark text-light border-secondary" required placeholder="ejemplo@servicio.com">
         </div>
 
+        <!-- Contraseña -->
         <div class="mb-3">
-          <label class="form-label">Contraseña</label>
-          <input type="text" name="password" class="form-control bg-dark text-light border-secondary" required placeholder="Contraseña o token">
+          <label class="form-label fw-semibold">Contraseña / Token *</label>
+          <input type="text" name="password" class="form-control bg-dark text-light border-secondary" required placeholder="Contraseña o token de acceso">
         </div>
 
+        <!-- Notas -->
         <div class="mb-3">
-          <label class="form-label">Notas</label>
-          <textarea name="notas" class="form-control bg-dark text-light border-secondary" rows="2" placeholder="Detalles opcionales..."></textarea>
+          <label class="form-label fw-semibold">Notas (opcional)</label>
+          <textarea name="notas" class="form-control bg-dark text-light border-secondary" rows="2" placeholder="Detalles adicionales..."></textarea>
         </div>
 
+        <!-- Cupos -->
         <div class="mb-3">
-          <label class="form-label">Cupos</label>
+          <label class="form-label fw-semibold">Cupos disponibles</label>
           <input type="number" name="cupos" class="form-control bg-dark text-light border-secondary" value="1" min="1">
+          <small class="text-secondary">Cantidad de veces que esta cuenta puede asignarse.</small>
         </div>
 
-        <button class="btn btn-danger w-100 py-2">
+        <!-- Botón -->
+        <button class="btn btn-danger w-100 py-2 mt-2">
           <i class="bi bi-check2-circle me-1"></i>Guardar cuenta
         </button>
       </form>
