@@ -4,24 +4,66 @@
   <h2 class="mb-4 text-danger fw-bold">Catálogo</h2>
 
   <div class="row g-3">
-    <% if (productos.length === 0) { %>
+    <% if (!productos || productos.length === 0) { %>
       <div class="col-12 text-center text-secondary">
         <p>No hay productos disponibles por el momento.</p>
       </div>
     <% } %>
 
-    <% productos.forEach(p => { %>
-      <div class="col-6 col-md-4 col-lg-3">
-        <a href="/comprar/<%= p.id %>" class="text-decoration-none">
-          <div class="card h-100 bg-black border border-secondary rounded-4 text-center p-3 hover-shadow-sm">
-            <% if (p.logo) { %>
-              <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid mb-3" style="max-height: 60px; object-fit: contain;">
-            <% } else { %>
-              <div class="bg-secondary rounded py-4 mb-3"></div>
+    <% productos.forEach(p => { 
+         const usados = p.cupos_usados || 0;
+         const total = p.cupos_total || 0;
+         const disp = Math.max(0, total - usados);
+    %>
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card h-100 bg-black border border-secondary rounded-4 p-3">
+          <% if (p.logo) { %>
+            <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="img-fluid rounded mb-3" style="max-height:160px; object-fit:cover;">
+          <% } %>
+          <h5 class="text-light fw-semibold"><%= p.nombre %></h5>
+          <% if (p.descripcion) { %>
+            <p class="text-secondary small mb-2"><%= p.descripcion %></p>
+          <% } %>
+          <p class="text-secondary small">Disponibles: 
+            <span class="<%= disp>0?'text-success':'text-danger' %> fw-bold"><%= disp %></span>
+          </p>
+
+          <div class="d-flex flex-wrap gap-2 mt-2">
+            <% if (p.precio1 && disp>0) { %>
+              <form method="post" action="/comprar/<%= p.id %>" class="d-inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="meses" value="1">
+                <button class="btn btn-danger btn-sm w-100">
+                  1 mes — <%= p.precio1 %>$
+                </button>
+              </form>
             <% } %>
-            <h6 class="text-light fw-semibold"><%= p.nombre %></h6>
+
+            <% if (p.precio2 && disp>0) { %>
+              <form method="post" action="/comprar/<%= p.id %>" class="d-inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="meses" value="2">
+                <button class="btn btn-outline-light btn-sm w-100">
+                  2 meses — <%= p.precio2 %>$
+                </button>
+              </form>
+            <% } %>
+
+            <% if (p.precio3 && disp>0) { %>
+              <form method="post" action="/comprar/<%= p.id %>" class="d-inline">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="meses" value="3">
+                <button class="btn btn-outline-light btn-sm w-100">
+                  3 meses — <%= p.precio3 %>$
+                </button>
+              </form>
+            <% } %>
+
+            <% if (disp===0) { %>
+              <span class="badge text-bg-secondary">Sin cupos</span>
+            <% } %>
           </div>
-        </a>
+        </div>
       </div>
     <% }) %>
   </div>
