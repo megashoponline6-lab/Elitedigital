@@ -1,4 +1,4 @@
-// ✅ server.js (versión corregida y completa con recarga funcional)
+// ✅ server.js (versión final y funcional con recarga por correo)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -58,14 +58,12 @@ app.use(
 
 const csrfProtection = csrf({ cookie: true });
 
-// 🔒 Middlewares de autenticación
+// 🔒 Middlewares
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
 }
-
 function requireAdmin(req, res, next) {
-  // Evita que un cliente entre al admin
   if (req.session.user) return res.redirect('/panel?error=No tienes permiso para entrar aquí');
   if (!req.session.admin) return res.redirect('/admin');
   next();
@@ -84,7 +82,7 @@ await run(`CREATE TABLE IF NOT EXISTS manual_sales (id INTEGER PRIMARY KEY AUTOI
 await run(`CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, estado TEXT DEFAULT 'abierto', created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER, autor TEXT, mensaje TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 
-// 👑 Crear admin por defecto
+// 👑 Admin por defecto
 const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
 if (adminCount.c === 0) {
   const defaultUser = 'ml3838761@gmail.com';
@@ -94,7 +92,7 @@ if (adminCount.c === 0) {
   console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
 }
 
-// 🌱 Seed productos si está vacío
+// 🌱 Seed productos
 const c = await get(`SELECT COUNT(*) as c FROM products;`);
 if (c.c === 0) {
   const seedPath = path.join(process.cwd(), 'seed', 'products.json');
@@ -106,7 +104,7 @@ if (c.c === 0) {
   }
 }
 
-// 🌐 Sesión + mensajes visuales
+// 🌐 Sesión + mensajes
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -138,18 +136,16 @@ app.get('/catalogo', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 📝 Registro de clientes
+// 📝 Registro
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
-
 function normalizeEmail(correo) {
   correo = (correo || '').trim().toLowerCase();
   const m = correo.match(/^([^@+]+)(\+[^@]+)?(@gmail\.com)$/);
   if (m) return m[1] + m[3];
   return correo;
 }
-
 app.post('/registro',
   csrfProtection,
   body('nombre').notEmpty(),
@@ -161,13 +157,11 @@ app.post('/registro',
     const errores = validationResult(req);
     if (!errores.isEmpty())
       return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
-
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
     const existe = await get(`SELECT id FROM users WHERE lower(correo)=?;`, [correo]);
     if (existe)
       return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
-
     const passhash = await bcrypt.hash(password, 10);
     await run(`INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`,
       [nombre, apellido, pais, telefono || '', correo, passhash]);
@@ -180,7 +174,6 @@ app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
 });
-
 app.post('/login',
   csrfProtection,
   body('correo').isEmail(),
@@ -190,24 +183,19 @@ app.post('/login',
     const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
     if (!u)
       return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
-
     const ok = await bcrypt.compare(req.body.password, u.passhash);
     if (!ok)
       return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
-
     req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
     res.redirect('/panel?ok=Bienvenido');
   }
 );
 
-app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/?ok=Sesión cerrada')));
-
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
   const sub = await get(
-    `SELECT s.*, p.nombre as prod_nombre
-     FROM subscriptions s
+    `SELECT s.*, p.nombre as prod_nombre FROM subscriptions s
      LEFT JOIN products p ON p.id=s.product_id
      WHERE s.user_id=? ORDER BY s.id DESC LIMIT 1;`,
     [user.id]
@@ -217,7 +205,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   res.render('panel', { csrfToken: req.csrfToken(), user, sub, dias, tickets });
 });
 
-// 🧾 Tickets
+// 💬 Tickets
 app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
   let ticketId = req.body.ticket_id;
   if (!ticketId) {
@@ -228,21 +216,13 @@ app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), asy
   res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
-// 🔑 Admin setup
-app.get('/admin/setup', csrfProtection, async (req, res) => {
-  const c = await get(`SELECT COUNT(*) as c FROM admins;`);
-  if (c.c > 0) return res.redirect('/admin');
-  res.render('admin/setup', { csrfToken: req.csrfToken(), errores: [] });
-});
-
-// 🧍‍♂️ Admin login
+// 🔑 Admin
 app.get('/admin', csrfProtection, async (req, res) => {
   delete req.session.user;
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c === 0) return res.redirect('/admin/setup');
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
 });
-
 app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').notEmpty(), async (req, res) => {
   const a = await get(`SELECT * FROM admins WHERE usuario=?;`, [req.body.usuario]);
   if (!a) return res.redirect('/admin?error=Credenciales');
@@ -251,7 +231,6 @@ app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').
   req.session.admin = { id: a.id, usuario: a.usuario };
   res.redirect('/admin/panel?ok=Bienvenido');
 });
-
 app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
 // 📊 Panel admin
@@ -271,33 +250,27 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 💰 Recargar saldo a un cliente
+// 💰 Recargar saldo (por correo)
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
-    const userId = parseInt(req.body.user_id);
-    const monto = parseInt(req.body.monto);
-    const nota = req.body.nota || '';
-
-    if (isNaN(userId) || isNaN(monto) || monto <= 0) {
-      return res.redirect('/admin/panel?error=Datos inválidos');
+    const { correo, monto, nota } = req.body;
+    if (!correo || !monto) {
+      return res.redirect('/admin/panel?error=Faltan datos para recargar');
     }
 
-    const user = await get(`SELECT * FROM users WHERE id=?;`, [userId]);
-    if (!user) return res.redirect('/admin/panel?error=Cliente no encontrado');
+    const user = await get(`SELECT id, correo, saldo FROM users WHERE lower(correo)=?;`, [correo.toLowerCase()]);
+    if (!user) {
+      return res.redirect('/admin/panel?error=Usuario no encontrado');
+    }
 
-    const nuevoSaldo = user.saldo + monto;
-    await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, userId]);
+    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, user.id]);
+    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user.id, monto, nota || 'Recarga manual']);
 
-    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [
-      userId,
-      monto,
-      nota || `Recarga manual por admin (${req.session.admin.usuario})`,
-    ]);
-
-    res.redirect(`/admin/panel?ok=Saldo recargado a ${user.correo}`);
+    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error interno al recargar');
+    res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
 
