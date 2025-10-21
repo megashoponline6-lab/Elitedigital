@@ -1,16 +1,15 @@
-// ✅ controllers/adminAccountsController.js — Versión final lista para Render (ESM)
+// ✅ controllers/adminAccountsController.js — Versión final optimizada para Render (ESM)
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 
 /**
- * 📄 Muestra la vista principal de gestión de cuentas
+ * 📄 Vista principal de gestión de cuentas
  */
 export const view = async (req, res) => {
   try {
-    // 🔹 Obtener todas las plataformas (para el menú desplegable)
     const platforms = await Platform.find({}).sort({ name: 1 }).lean();
 
-    // 🔹 Filtros opcionales (por plataforma o búsqueda de correo)
+    // Filtros
     const { platform: platformId, q } = req.query;
     const filter = {};
 
@@ -20,108 +19,119 @@ export const view = async (req, res) => {
       filter.$or = [{ email: regex }];
     }
 
-    // 🔹 Obtener cuentas con relación a plataforma
     const accounts = await Account.find(filter)
       .populate('platform', 'name')
       .sort({ createdAt: -1 })
       .lean();
 
-    // 🔹 Renderizar la vista admin-accounts.ejs
     res.render('admin/admin-accounts', {
       title: 'Gestión de Cuentas',
       platforms,
       accounts,
-      filters: { platformId: platformId || 'all', q: q || '' }
+      filters: { platformId: platformId || 'all', q: q || '' },
+      csrfToken: req.csrfToken(),
     });
   } catch (err) {
     console.error('❌ Error al mostrar gestión de cuentas:', err);
-    res.status(500).send('Error cargando gestión de cuentas');
+    res.status(500).render('admin/admin-accounts', {
+      title: 'Gestión de Cuentas',
+      platforms: [],
+      accounts: [],
+      filters: { platformId: 'all', q: '' },
+      csrfToken: req.csrfToken(),
+      error: 'Error interno al cargar cuentas',
+    });
   }
 };
 
 /**
- * ➕ Crea una nueva cuenta
+ * ➕ Crear nueva cuenta
  */
 export const create = async (req, res) => {
   try {
     const { platform, email, password, slots } = req.body;
 
     if (!platform || !email || !password || !slots) {
-      return res.status(400).send('Todos los campos son obligatorios');
+      return res.redirect('/admin/cuentas?error=Faltan campos obligatorios');
     }
 
     await Account.create({
       platform,
-      email,
+      email: email.trim().toLowerCase(),
       password,
       slots: Number(slots),
-      active: true
+      active: true,
     });
 
     console.log(`✅ Cuenta creada: ${email}`);
-    res.redirect('/admin/cuentas');
+    res.redirect('/admin/cuentas?ok=Cuenta creada correctamente');
   } catch (err) {
     console.error('❌ Error al crear cuenta:', err);
-    res.status(500).send('No se pudo crear la cuenta');
+    res.redirect('/admin/cuentas?error=Error al crear cuenta');
   }
 };
 
 /**
- * ✏️ Actualiza una cuenta existente
+ * ✏️ Actualizar cuenta existente
  */
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
     const { email, password, slots, active } = req.body;
 
-    await Account.findByIdAndUpdate(id, {
-      ...(email ? { email } : {}),
+    const updated = await Account.findByIdAndUpdate(id, {
+      ...(email ? { email: email.trim().toLowerCase() } : {}),
       ...(password ? { password } : {}),
       ...(slots ? { slots: Number(slots) } : {}),
-      active: active === 'true' || active === true
+      active: active === 'true' || active === true,
     });
 
+    if (!updated) {
+      return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
+    }
+
     console.log(`🟡 Cuenta actualizada: ${id}`);
-    res.redirect('/admin/cuentas');
+    res.redirect('/admin/cuentas?ok=Cuenta actualizada');
   } catch (err) {
     console.error('❌ Error al actualizar cuenta:', err);
-    res.status(500).send('No se pudo actualizar la cuenta');
+    res.redirect('/admin/cuentas?error=Error al actualizar');
   }
 };
 
 /**
- * 🗑️ Elimina una cuenta
+ * 🗑️ Eliminar cuenta
  */
 export const remove = async (req, res) => {
   try {
     const { id } = req.params;
-    await Account.findByIdAndDelete(id);
+    const deleted = await Account.findByIdAndDelete(id);
+
+    if (!deleted) {
+      return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
+    }
+
     console.log(`🗑️ Cuenta eliminada: ${id}`);
-    res.redirect('/admin/cuentas');
+    res.redirect('/admin/cuentas?ok=Cuenta eliminada correctamente');
   } catch (err) {
     console.error('❌ Error al eliminar cuenta:', err);
-    res.status(500).send('No se pudo eliminar la cuenta');
+    res.redirect('/admin/cuentas?error=Error al eliminar cuenta');
   }
 };
 
 /**
- * 🎲 Selecciona cuentas aleatorias sin repetir (para asignar a clientes)
- * @param {string} platformId - ID de la plataforma
- * @param {number} count - Número de cuentas a seleccionar
- * @returns {Array} Cuentas seleccionadas
+ * 🎲 Seleccionar cuentas aleatorias sin repetir
  */
 export const pickRandomAccounts = async (platformId, count = 1) => {
   try {
-    // 🔹 Buscar cuentas disponibles (activas y con cupos)
     const pool = await Account.find({
       platform: platformId,
       active: true,
-      slots: { $gt: 0 }
+      slots: { $gt: 0 },
     }).lean();
 
     if (!pool.length) return [];
 
-    // 🔹 Mezclar aleatoriamente (algoritmo Fisher-Yates)
+    // Mezclar aleatoriamente (Fisher–Yates)
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -129,7 +139,7 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
 
     const selected = pool.slice(0, Math.min(count, pool.length));
 
-    // 🔹 Restar cupos a las cuentas seleccionadas
+    // Reducir slots
     await Promise.all(
       selected.map(acc =>
         Account.updateOne(
