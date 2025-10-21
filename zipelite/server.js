@@ -1,4 +1,4 @@
-// ✅ server.js (versión corregida y con flujos separados para cliente y admin)
+// ✅ server.js (versión corregida y completa con recarga funcional)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -84,7 +84,7 @@ await run(`CREATE TABLE IF NOT EXISTS manual_sales (id INTEGER PRIMARY KEY AUTOI
 await run(`CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, estado TEXT DEFAULT 'abierto', created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER, autor TEXT, mensaje TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 
-// 👑 Crear admin por defecto si no existe
+// 👑 Crear admin por defecto
 const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
 if (adminCount.c === 0) {
   const defaultUser = 'ml3838761@gmail.com';
@@ -106,7 +106,7 @@ if (c.c === 0) {
   }
 }
 
-// 🌐 Exponer sesión + mensajes visuales en vistas
+// 🌐 Sesión + mensajes visuales
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -114,7 +114,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Página principal y catálogo
+// 🏠 Página principal
 app.get('/', async (req, res, next) => {
   try {
     const etiquetas = await all(`SELECT DISTINCT etiqueta FROM products WHERE activo=1 ORDER BY etiqueta;`);
@@ -126,6 +126,7 @@ app.get('/', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// 🛍 Catálogo
 app.get('/catalogo', async (req, res, next) => {
   try {
     const etiquetas = await all(`SELECT DISTINCT etiqueta FROM products WHERE activo=1 ORDER BY etiqueta;`);
@@ -138,7 +139,9 @@ app.get('/catalogo', async (req, res, next) => {
 });
 
 // 📝 Registro de clientes
-app.get('/registro', csrfProtection, (req, res) => res.render('registro', { csrfToken: req.csrfToken(), errores: [] }));
+app.get('/registro', csrfProtection, (req, res) =>
+  res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
+);
 
 function normalizeEmail(correo) {
   correo = (correo || '').trim().toLowerCase();
@@ -156,20 +159,25 @@ app.post('/registro',
   body('password').isLength({ min: 6 }),
   async (req, res) => {
     const errores = validationResult(req);
-    if (!errores.isEmpty()) return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+    if (!errores.isEmpty())
+      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
     const existe = await get(`SELECT id FROM users WHERE lower(correo)=?;`, [correo]);
-    if (existe) return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
+    if (existe)
+      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
+
     const passhash = await bcrypt.hash(password, 10);
-    await run(`INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`, [nombre, apellido, pais, telefono || '', correo, passhash]);
+    await run(`INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`,
+      [nombre, apellido, pais, telefono || '', correo, passhash]);
     res.redirect('/login?ok=Registro completado');
   }
 );
 
 // 👤 Login clientes
 app.get('/login', csrfProtection, (req, res) => {
-  delete req.session.admin; // Limpia sesión admin si existía
+  delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
 });
 
@@ -180,9 +188,13 @@ app.post('/login',
   async (req, res) => {
     const correo = normalizeEmail(req.body.correo);
     const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
-    if (!u) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
+    if (!u)
+      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
+
     const ok = await bcrypt.compare(req.body.password, u.passhash);
-    if (!ok) return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+    if (!ok)
+      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+
     req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
     res.redirect('/panel?ok=Bienvenido');
   }
@@ -205,7 +217,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   res.render('panel', { csrfToken: req.csrfToken(), user, sub, dias, tickets });
 });
 
-// 🧾 Tickets de usuario
+// 🧾 Tickets
 app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
   let ticketId = req.body.ticket_id;
   if (!ticketId) {
@@ -216,24 +228,16 @@ app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), asy
   res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
-// 🔑 Admin setup (solo primera vez)
+// 🔑 Admin setup
 app.get('/admin/setup', csrfProtection, async (req, res) => {
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c > 0) return res.redirect('/admin');
   res.render('admin/setup', { csrfToken: req.csrfToken(), errores: [] });
 });
 
-app.post('/admin/setup', csrfProtection, body('usuario').notEmpty(), body('password').isLength({ min: 8 }), async (req, res) => {
-  const c = await get(`SELECT COUNT(*) as c FROM admins;`);
-  if (c.c > 0) return res.redirect('/admin');
-  const passhash = await bcrypt.hash(req.body.password, 12);
-  await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?);`, [req.body.usuario, passhash]);
-  res.redirect('/admin?ok=Admin creado');
-});
-
 // 🧍‍♂️ Admin login
 app.get('/admin', csrfProtection, async (req, res) => {
-  delete req.session.user; // Limpia sesión cliente si existía
+  delete req.session.user;
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c === 0) return res.redirect('/admin/setup');
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
@@ -267,41 +271,37 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 🛠 Cambiar contraseña de admin
-app.get('/admin/cambiar-password', requireAdmin, csrfProtection, (req, res) => {
-  res.render('admin/change-password', { csrfToken: req.csrfToken(), errores: [], ok: null });
+// 💰 Recargar saldo a un cliente
+app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const userId = parseInt(req.body.user_id);
+    const monto = parseInt(req.body.monto);
+    const nota = req.body.nota || '';
+
+    if (isNaN(userId) || isNaN(monto) || monto <= 0) {
+      return res.redirect('/admin/panel?error=Datos inválidos');
+    }
+
+    const user = await get(`SELECT * FROM users WHERE id=?;`, [userId]);
+    if (!user) return res.redirect('/admin/panel?error=Cliente no encontrado');
+
+    const nuevoSaldo = user.saldo + monto;
+    await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, userId]);
+
+    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [
+      userId,
+      monto,
+      nota || `Recarga manual por admin (${req.session.admin.usuario})`,
+    ]);
+
+    res.redirect(`/admin/panel?ok=Saldo recargado a ${user.correo}`);
+  } catch (err) {
+    console.error('❌ Error al recargar saldo:', err);
+    res.redirect('/admin/panel?error=Error interno al recargar');
+  }
 });
 
-app.post(
-  '/admin/cambiar-password',
-  requireAdmin,
-  csrfProtection,
-  body('actual').notEmpty(),
-  body('nueva').isLength({ min: 8 }),
-  body('confirmar').notEmpty(),
-  async (req, res) => {
-    const { actual, nueva, confirmar } = req.body;
-    const errores = [];
-    const admin = await get(`SELECT * FROM admins WHERE id=?;`, [req.session.admin.id]);
-
-    if (!await bcrypt.compare(actual, admin.passhash)) {
-      errores.push({ msg: 'La contraseña actual es incorrecta.' });
-    }
-    if (nueva !== confirmar) {
-      errores.push({ msg: 'Las contraseñas nuevas no coinciden.' });
-    }
-
-    if (errores.length) {
-      return res.render('admin/change-password', { csrfToken: req.csrfToken(), errores, ok: null });
-    }
-
-    const nuevaHash = await bcrypt.hash(nueva, 12);
-    await run(`UPDATE admins SET passhash=? WHERE id=?;`, [nuevaHash, admin.id]);
-    res.redirect('/admin/panel?ok=Contraseña actualizada');
-  }
-);
-
-// 🔄 Activar/desactivar productos ✅
+// 🔄 Activar/desactivar productos
 app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   const { nombre, etiqueta, precio, activo, logo } = req.body;
   const activoVal = String(activo) === '1' ? 1 : 0;
@@ -329,6 +329,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Error Interno del Servidor');
 });
 
-// Start
+// 🚀 Start
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
