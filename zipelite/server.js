@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets) + Sistema de Ventas + Gestión de Cuentas
+// ✅ server.js — versión final con MongoDB Atlas + SQLite + Gestión de Cuentas y Plataformas + Sistema de Ventas
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -16,12 +16,14 @@ import fs from 'fs';
 import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
-// 🧩 MongoDB + rutas de gestión y ventas
+// 🧩 MongoDB + rutas y modelos
 import mongoose from 'mongoose';
 import adminAccountsRoutes from './routes/adminAccounts.js';
+import adminPlatformsRoutes from './routes/adminPlatforms.js'; // ✅ NUEVO
 import salesRoutes from './routes/sales.js';
 import User from './models/User.js';
-import Account from './models/Account.js'; // ✅ añadido para contador de cuentas
+import Account from './models/Account.js';
+import Platform from './models/Platform.js'; // ✅ NUEVO
 
 dotenv.config();
 
@@ -91,7 +93,7 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧱 Tablas SQLite
+// 🧱 Tablas SQLite (tickets, productos, etc.)
 await run(`CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   usuario TEXT UNIQUE,
@@ -159,22 +161,7 @@ if (adminCount.c === 0) {
   console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
 }
 
-// 🌱 Productos iniciales
-const c = await get(`SELECT COUNT(*) as c FROM products;`);
-if (c.c === 0) {
-  const seedPath = path.join(process.cwd(), 'seed', 'products.json');
-  if (fs.existsSync(seedPath)) {
-    const seed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
-    for (const [nombre, etiqueta, precio, logo] of seed) {
-      await run(
-        `INSERT INTO products(nombre, etiqueta, precio, logo) VALUES (?,?,?,?);`,
-        [nombre, etiqueta, precio, logo]
-      );
-    }
-  }
-}
-
-// 🌐 Sesión + mensajes
+// 🌐 Mensajes globales
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -182,7 +169,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Home
+// 🏠 Home y catálogo
 app.get('/', async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
@@ -192,7 +179,6 @@ app.get('/', async (req, res, next) => {
   }
 });
 
-// 🛍 Catálogo
 app.get('/catalogo', async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
@@ -202,7 +188,7 @@ app.get('/catalogo', async (req, res, next) => {
   }
 });
 
-// 📝 Registro (MongoDB)
+// 🧾 Registro de usuarios (MongoDB)
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
@@ -302,10 +288,9 @@ app.post(
   }
 );
 
-// ⚙️ Gestión de Cuentas (MongoDB)
+// ⚙️ Rutas de administración MongoDB
 app.use(adminAccountsRoutes);
-
-// 🛒 Sistema de Ventas (MongoDB)
+app.use(adminPlatformsRoutes); // ✅ NUEVO
 app.use(salesRoutes);
 
 // 👤 Panel usuario
@@ -319,50 +304,13 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 💬 Tickets (SQLite)
-app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
-  let ticketId = req.body.ticket_id;
-  if (!ticketId) {
-    const t = await run(`INSERT INTO tickets (user_id) VALUES (?);`, [req.session.user.id]);
-    ticketId = t.lastID;
-  }
-  await run(
-    `INSERT INTO ticket_messages (ticket_id, autor, mensaje) VALUES (?,?,?);`,
-    [ticketId, 'cliente', req.body.mensaje]
-  );
-  res.redirect('/panel?ok=Mensaje enviado#soporte');
-});
-
-// 🔑 Admin (SQLite)
-app.get('/admin', csrfProtection, async (req, res) => {
-  delete req.session.user;
-  const c = await get(`SELECT COUNT(*) as c FROM admins;`);
-  if (c.c === 0) return res.redirect('/admin/setup');
-  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
-});
-
-app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').notEmpty(), async (req, res) => {
-  const a = await get(`SELECT * FROM admins WHERE usuario=?;`, [req.body.usuario]);
-  if (!a) return res.redirect('/admin?error=Credenciales');
-  const ok = await bcrypt.compare(req.body.password, a.passhash);
-  if (!ok) return res.redirect('/admin?error=Credenciales');
-  req.session.admin = { id: a.id, usuario: a.usuario };
-  res.redirect('/admin/panel?ok=Bienvenido');
-});
-
-app.get('/admin/salir', (req, res) => {
-  delete req.session.admin;
-  res.redirect('/admin?ok=Sesión cerrada');
-});
-
-// 📊 Panel admin (MongoDB + SQLite con resumen + cuentas)
+// 📊 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
-
-    // 🔢 Contador total de cuentas (MongoDB)
     const totalAccounts = await Account.countDocuments();
+    const totalPlatforms = await Platform.countDocuments(); // ✅ NUEVO
 
     const totalUsuarios = usuarios.length;
     const activos = usuarios.filter(u => u.activo).length;
@@ -373,7 +321,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
       csrfToken: req.csrfToken(),
       usuarios,
       productos,
-      stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts }
+      stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms }
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
@@ -381,7 +329,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 💰 Recargar saldo (MongoDB + SQLite)
+// 💰 Recargar saldo
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
