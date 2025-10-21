@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets)
+// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets) + Sistema de Ventas
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -16,9 +16,10 @@ import fs from 'fs';
 import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
-// 🧩 MongoDB + rutas de gestión
+// 🧩 MongoDB + rutas de gestión y ventas
 import mongoose from 'mongoose';
 import adminAccountsRoutes from './routes/adminAccounts.js';
+import salesRoutes from './routes/sales.js'; // ✅ nueva ruta añadida
 import User from './models/User.js';
 
 dotenv.config();
@@ -302,6 +303,9 @@ app.post(
 
 // ⚙️ Gestión de Cuentas (MongoDB)
 app.use(adminAccountsRoutes);
+
+// 🛒 Sistema de Ventas (MongoDB)
+app.use(salesRoutes); // ✅ integración añadida aquí
 
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
