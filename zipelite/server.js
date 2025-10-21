@@ -1,4 +1,4 @@
-// ✅ server.js (versión final y funcional con recarga por correo)
+// ✅ server.js (versión final con manejo de plataformas de streaming)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -75,7 +75,7 @@ app.locals.dayjs = dayjs;
 // 🧱 Tablas
 await run(`CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT UNIQUE, passhash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, apellido TEXT, pais TEXT, telefono TEXT, correo TEXT UNIQUE, passhash TEXT, saldo INTEGER DEFAULT 0, activo INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, etiqueta TEXT, precio INTEGER, logo TEXT, activo INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
+await run(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, etiqueta TEXT, precio INTEGER, logo TEXT, activo INTEGER DEFAULT 1, disponible INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, product_id INTEGER, vence_en TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS topups (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, monto INTEGER, nota TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
 await run(`CREATE TABLE IF NOT EXISTS manual_sales (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, descripcion TEXT, monto INTEGER, fecha TEXT DEFAULT CURRENT_TIMESTAMP);`);
@@ -115,24 +115,16 @@ app.use((req, res, next) => {
 // 🏠 Página principal
 app.get('/', async (req, res, next) => {
   try {
-    const etiquetas = await all(`SELECT DISTINCT etiqueta FROM products WHERE activo=1 ORDER BY etiqueta;`);
-    const filtro = req.query.f || '';
-    const productos = filtro
-      ? await all(`SELECT * FROM products WHERE activo=1 AND etiqueta=? ORDER BY nombre;`, [filtro])
-      : await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
-    res.render('home', { productos, etiquetas, filtro });
+    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
+    res.render('home', { productos, etiquetas: [], filtro: '' });
   } catch (e) { next(e); }
 });
 
 // 🛍 Catálogo
 app.get('/catalogo', async (req, res, next) => {
   try {
-    const etiquetas = await all(`SELECT DISTINCT etiqueta FROM products WHERE activo=1 ORDER BY etiqueta;`);
-    const filtro = req.query.f || '';
-    const productos = filtro
-      ? await all(`SELECT * FROM products WHERE activo=1 AND etiqueta=? ORDER BY nombre;`, [filtro])
-      : await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
-    res.render('catalogo', { productos, etiquetas, filtro });
+    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
+    res.render('catalogo', { productos, etiquetas: [], filtro: '' });
   } catch (e) { next(e); }
 });
 
@@ -237,13 +229,11 @@ app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users ORDER BY id DESC LIMIT 15;`);
-    const productos = await all(`SELECT * FROM products ORDER BY id DESC LIMIT 50;`);
-    const tickets = await all(`SELECT t.*, u.correo FROM tickets t LEFT JOIN users u ON u.id=t.user_id WHERE t.estado='abierto' ORDER BY t.id DESC LIMIT 10;`);
-    const manual = await all(`SELECT m.*, u.correo FROM manual_sales m LEFT JOIN users u ON u.id=m.user_id ORDER BY m.id DESC LIMIT 10;`);
+    const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
     const totSaldo = await get(`SELECT SUM(saldo) as s FROM users;`);
     const totManualMes = await get(`SELECT SUM(monto) as s FROM manual_sales WHERE strftime('%Y-%m', fecha)=strftime('%Y-%m','now');`);
     const totSubsAct = await get(`SELECT COUNT(*) as c FROM subscriptions WHERE date(vence_en) >= date('now');`);
-    res.render('admin/panel', { csrfToken: req.csrfToken(), usuarios, productos, tickets, manual, totSaldo, totManualMes, totSubsAct });
+    res.render('admin/panel', { csrfToken: req.csrfToken(), usuarios, productos, totSaldo, totManualMes, totSubsAct });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
     next(err);
@@ -254,19 +244,11 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
-    if (!correo || !monto) {
-      return res.redirect('/admin/panel?error=Faltan datos para recargar');
-    }
-
-    const user = await get(`SELECT id, correo, saldo FROM users WHERE lower(correo)=?;`, [correo.toLowerCase()]);
-    if (!user) {
-      return res.redirect('/admin/panel?error=Usuario no encontrado');
-    }
-
-    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    const user = await get(`SELECT id, saldo FROM users WHERE lower(correo)=?;`, [correo.toLowerCase()]);
+    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
+    const nuevoSaldo = user.saldo + parseInt(monto);
     await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, user.id]);
     await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user.id, monto, nota || 'Recarga manual']);
-
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
@@ -274,23 +256,42 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 🔄 Activar/desactivar productos
-app.post('/admin/producto/:id/editar', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
-  const { nombre, etiqueta, precio, activo, logo } = req.body;
-  const activoVal = String(activo) === '1' ? 1 : 0;
-  let logoField = logo;
-  if (req.file) logoField = `/public/uploads/${req.file.filename}`;
-  await run(`UPDATE products SET nombre=?, etiqueta=?, precio=?, logo=?, activo=? WHERE id=?;`,
-    [nombre, etiqueta, parseInt(precio), logoField, activoVal, parseInt(req.params.id)]);
-  res.redirect('/admin/panel?ok=Producto actualizado');
+// 🎬 Añadir nueva plataforma
+app.post('/admin/plataforma', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
+  try {
+    const { nombre } = req.body;
+    if (!nombre || !req.file) return res.redirect('/admin/panel?error=Faltan datos');
+    const logoPath = `/public/uploads/${req.file.filename}`;
+    await run(`INSERT INTO products (nombre, logo, activo, disponible) VALUES (?,?,1,1);`, [nombre, logoPath]);
+    res.redirect('/admin/panel?ok=Plataforma añadida');
+  } catch (err) {
+    console.error('❌ Error al añadir plataforma:', err);
+    res.redirect('/admin/panel?error=Error al añadir');
+  }
 });
 
-// 🔥 Desactivar cliente
-app.post('/admin/cliente/:id/toggle', requireAdmin, csrfProtection, async (req, res) => {
-  const user = await get(`SELECT activo FROM users WHERE id=?;`, [parseInt(req.params.id)]);
-  const nuevo = user.activo ? 0 : 1;
-  await run(`UPDATE users SET activo=? WHERE id=?;`, [nuevo, parseInt(req.params.id)]);
-  res.redirect('/admin/panel?ok=Usuario actualizado');
+// 🖼️ Cambiar logo de plataforma
+app.post('/admin/plataforma/:id/logo', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
+  try {
+    if (!req.file) return res.redirect('/admin/panel?error=Sin archivo');
+    const logoPath = `/public/uploads/${req.file.filename}`;
+    await run(`UPDATE products SET logo=? WHERE id=?;`, [logoPath, parseInt(req.params.id)]);
+    res.redirect('/admin/panel?ok=Logo actualizado');
+  } catch (err) {
+    console.error('❌ Error al actualizar logo:', err);
+    res.redirect('/admin/panel?error=Error al cambiar logo');
+  }
+});
+
+// ❌ Eliminar plataforma
+app.post('/admin/plataforma/:id/eliminar', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    await run(`DELETE FROM products WHERE id=?;`, [parseInt(req.params.id)]);
+    res.redirect('/admin/panel?ok=Plataforma eliminada');
+  } catch (err) {
+    console.error('❌ Error al eliminar plataforma:', err);
+    res.redirect('/admin/panel?error=Error al eliminar');
+  }
 });
 
 // 404
