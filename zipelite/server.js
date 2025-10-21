@@ -1,4 +1,4 @@
-// ✅ server.js (versión completa con soporte para alertas visuales)
+// ✅ server.js (versión corregida y con flujos separados para cliente y admin)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -63,7 +63,10 @@ function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
 }
+
 function requireAdmin(req, res, next) {
+  // Evita que un cliente entre al admin
+  if (req.session.user) return res.redirect('/panel?error=No tienes permiso para entrar aquí');
   if (!req.session.admin) return res.redirect('/admin');
   next();
 }
@@ -165,9 +168,10 @@ app.post('/registro',
 );
 
 // 👤 Login clientes
-app.get('/login', csrfProtection, (req, res) =>
-  res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
-);
+app.get('/login', csrfProtection, (req, res) => {
+  delete req.session.admin; // Limpia sesión admin si existía
+  res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
+});
 
 app.post('/login',
   csrfProtection,
@@ -218,6 +222,7 @@ app.get('/admin/setup', csrfProtection, async (req, res) => {
   if (c.c > 0) return res.redirect('/admin');
   res.render('admin/setup', { csrfToken: req.csrfToken(), errores: [] });
 });
+
 app.post('/admin/setup', csrfProtection, body('usuario').notEmpty(), body('password').isLength({ min: 8 }), async (req, res) => {
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c > 0) return res.redirect('/admin');
@@ -228,10 +233,12 @@ app.post('/admin/setup', csrfProtection, body('usuario').notEmpty(), body('passw
 
 // 🧍‍♂️ Admin login
 app.get('/admin', csrfProtection, async (req, res) => {
+  delete req.session.user; // Limpia sesión cliente si existía
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c === 0) return res.redirect('/admin/setup');
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
 });
+
 app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').notEmpty(), async (req, res) => {
   const a = await get(`SELECT * FROM admins WHERE usuario=?;`, [req.body.usuario]);
   if (!a) return res.redirect('/admin?error=Credenciales');
@@ -240,6 +247,7 @@ app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').
   req.session.admin = { id: a.id, usuario: a.usuario };
   res.redirect('/admin/panel?ok=Bienvenido');
 });
+
 app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
 // 📊 Panel admin
