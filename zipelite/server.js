@@ -19,11 +19,11 @@ import expressLayouts from 'express-ejs-layouts';
 // 🧩 MongoDB + rutas y modelos
 import mongoose from 'mongoose';
 import adminAccountsRoutes from './routes/adminAccounts.js';
-import adminPlatformsRoutes from './routes/adminPlatforms.js'; // ✅ NUEVO
+import adminPlatformsRoutes from './routes/adminPlatforms.js';
 import salesRoutes from './routes/sales.js';
 import User from './models/User.js';
 import Account from './models/Account.js';
-import Platform from './models/Platform.js'; // ✅ NUEVO
+import Platform from './models/Platform.js';
 
 dotenv.config();
 
@@ -291,7 +291,7 @@ app.post(
 // 👑 Login administrador (SQLite)
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
-  res.render('adminLogin', { csrfToken: req.csrfToken(), errores: [] });
+  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
 });
 
 app.post(
@@ -304,14 +304,14 @@ app.post(
       const { usuario, password } = req.body;
       const admin = await get(`SELECT * FROM admins WHERE usuario = ?;`, [usuario]);
       if (!admin)
-        return res.status(400).render('adminLogin', {
+        return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
           errores: [{ msg: 'Usuario no encontrado' }],
         });
 
       const ok = await bcrypt.compare(password, admin.passhash);
       if (!ok)
-        return res.status(400).render('adminLogin', {
+        return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
           errores: [{ msg: 'Contraseña incorrecta' }],
         });
@@ -320,7 +320,7 @@ app.post(
       res.redirect('/admin/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login admin:', err);
-      res.status(500).render('adminLogin', {
+      res.status(500).render('admin/login', {
         csrfToken: req.csrfToken(),
         errores: [{ msg: 'Error interno del servidor' }],
       });
