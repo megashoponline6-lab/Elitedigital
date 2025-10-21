@@ -9,6 +9,7 @@
 </div>
 
 <div class="row g-4 mt-1">
+
   <!-- 🧾 RESUMEN -->
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4">
@@ -32,25 +33,27 @@
     </div>
   </div>
 
-  <!-- 💰 RECARGAR SALDO -->
+  <!-- 💰 RECARGAR SALDO (POR CORREO) -->
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
         <h5>Recargar saldo</h5>
 
-        <!-- 🔧 FORMULARIO CORREGIDO -->
         <form class="row g-2" method="POST" action="/admin/recargar">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-          <div class="col-md-3">
-            <input class="form-control" name="user_id" type="number" placeholder="ID Usuario" required>
+          <div class="col-md-4">
+            <input class="form-control" name="correo" type="email" placeholder="Correo del usuario" required>
           </div>
+
           <div class="col-md-3">
             <input class="form-control" name="monto" type="number" min="1" placeholder="Monto" required>
           </div>
-          <div class="col-md-4">
+
+          <div class="col-md-3">
             <input class="form-control" name="nota" placeholder="Nota (opcional)">
           </div>
+
           <div class="col-md-2">
             <button class="btn btn-danger w-100">Cargar</button>
           </div>
@@ -68,7 +71,11 @@
         <table class="table table-dark table-sm align-middle">
           <thead>
             <tr>
-              <th>ID</th><th>Nombre</th><th>Correo</th><th>Saldo</th><th>Acciones</th>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Correo</th>
+              <th>Saldo</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -100,36 +107,50 @@
 
         <form class="row g-2 mb-3" method="POST" action="/admin/producto" enctype="multipart/form-data">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
           <div class="col-md-4">
-            <input class="form-control" name="nombre" placeholder="Nombre">
+            <input class="form-control" name="nombre" placeholder="Nombre" required>
           </div>
+
           <div class="col-md-2">
-            <select class="form-select" name="etiqueta">
-              <option>1M</option>
-              <option>2M</option>
-              <option>3M</option>
-              <option>6M</option>
-              <option>Anual</option>
-              <option>Completa</option>
+            <select class="form-select" name="etiqueta" required>
+              <option value="1M">1M</option>
+              <option value="2M">2M</option>
+              <option value="3M">3M</option>
+              <option value="6M">6M</option>
+              <option value="Anual">Anual</option>
+              <option value="Completa">Completa</option>
             </select>
           </div>
+
           <div class="col-md-2">
-            <input class="form-control" name="precio" type="number" placeholder="Precio">
+            <input class="form-control" name="precio" type="number" min="1" placeholder="Precio" required>
           </div>
+
           <div class="col-md-2">
-            <input class="form-control" name="logo" placeholder="Emoji (opcional)">
+            <input class="form-control" name="logo" placeholder="Emoji o texto (opcional)">
           </div>
+
           <div class="col-md-2">
             <input class="form-control" type="file" name="logoimg" accept="image/*">
           </div>
-          <div class="col-12">
+
+          <div class="col-12 mt-2">
             <button class="btn btn-danger">Añadir</button>
           </div>
         </form>
 
         <table class="table table-dark table-sm align-middle">
           <thead>
-            <tr><th>ID</th><th>Logo</th><th>Nombre</th><th>Etiqueta</th><th>Precio</th><th>Activo</th><th>Acciones</th></tr>
+            <tr>
+              <th>ID</th>
+              <th>Logo</th>
+              <th>Nombre</th>
+              <th>Etiqueta</th>
+              <th>Precio</th>
+              <th>Activo</th>
+              <th>Acciones</th>
+            </tr>
           </thead>
           <tbody>
             <% productos.forEach(p => { %>
