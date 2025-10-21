@@ -350,12 +350,24 @@ app.get('/admin/salir', (req, res) => {
   res.redirect('/admin?ok=Sesión cerrada');
 });
 
-// 📊 Panel admin (MongoDB + SQLite)
+// 📊 Panel admin (MongoDB + SQLite con resumen)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
-    res.render('admin/panel', { csrfToken: req.csrfToken(), usuarios, productos });
+
+    // 🧮 Estadísticas
+    const totalUsuarios = usuarios.length;
+    const activos = usuarios.filter(u => u.activo).length;
+    const inactivos = totalUsuarios - activos;
+    const totalSaldo = usuarios.reduce((sum, u) => sum + (u.saldo || 0), 0);
+
+    res.render('admin/panel', {
+      csrfToken: req.csrfToken(),
+      usuarios,
+      productos,
+      stats: { totalUsuarios, activos, inactivos, totalSaldo }
+    });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
     next(err);
