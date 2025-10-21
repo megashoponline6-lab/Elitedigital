@@ -356,7 +356,6 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
 
-    // 🧮 Estadísticas
     const totalUsuarios = usuarios.length;
     const activos = usuarios.filter(u => u.activo).length;
     const inactivos = totalUsuarios - activos;
@@ -371,6 +370,30 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
     next(err);
+  }
+});
+
+// 💰 Recargar saldo (MongoDB + SQLite)
+app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { correo, monto, nota } = req.body;
+    const user = await User.findOne({ correo: correo.toLowerCase() });
+
+    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
+
+    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
+
+    await run(
+      `INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`,
+      [user._id.toString(), parseInt(monto), nota || 'Recarga manual']
+    );
+
+    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo}`);
+    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
+  } catch (err) {
+    console.error('❌ Error al recargar saldo:', err);
+    res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
 
