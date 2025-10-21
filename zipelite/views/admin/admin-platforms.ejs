@@ -4,13 +4,18 @@
 <div class="container mt-4 text-light">
   <h1 class="mb-4">🎬 Gestión de Plataformas</h1>
 
+  <!-- ============================== -->
   <!-- FORMULARIO NUEVA PLATAFORMA -->
+  <!-- ============================== -->
   <div class="card bg-dark border-secondary mb-4 shadow">
     <div class="card-header border-secondary">
       <h5 class="mb-0">➕ Añadir nueva plataforma</h5>
     </div>
     <div class="card-body">
       <form action="/admin/plataformas" method="POST" enctype="multipart/form-data">
+        <!-- ✅ Token CSRF -->
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
         <div class="row g-3 align-items-center">
           <div class="col-md-5">
             <label class="form-label">Nombre de la plataforma</label>
@@ -22,6 +27,7 @@
               required
             />
           </div>
+
           <div class="col-md-5">
             <label class="form-label">Logo (opcional)</label>
             <input
@@ -31,6 +37,7 @@
               class="form-control bg-dark text-light border-secondary"
             />
           </div>
+
           <div class="col-md-2">
             <button class="btn btn-danger mt-4 w-100">Guardar</button>
           </div>
@@ -39,7 +46,9 @@
     </div>
   </div>
 
+  <!-- ============================== -->
   <!-- TABLA DE PLATAFORMAS -->
+  <!-- ============================== -->
   <div class="card bg-dark border-secondary shadow">
     <div class="card-header border-secondary">
       <h5 class="mb-0">📋 Plataformas registradas</h5>
@@ -66,14 +75,19 @@
             <% } else { %>
               <% platforms.forEach(p => { %>
                 <tr>
+                  <!-- Logo -->
                   <td>
                     <% if (p.logoUrl) { %>
-                      <img src="<%= p.logoUrl %>" style="height:40px; border-radius:8px;" />
+                      <img src="<%= p.logoUrl %>" style="height:40px; border-radius:8px;" alt="Logo <%= p.name %>" />
                     <% } else { %>
                       <span class="text-secondary">Sin logo</span>
                     <% } %>
                   </td>
+
+                  <!-- Nombre -->
                   <td><strong><%= p.name %></strong></td>
+
+                  <!-- Disponible -->
                   <td>
                     <% if (p.available) { %>
                       <span class="badge bg-success">Sí</span>
@@ -81,14 +95,37 @@
                       <span class="badge bg-secondary">No</span>
                     <% } %>
                   </td>
+
+                  <!-- Actualizar logo -->
                   <td>
-                    <form action="/admin/plataformas/<%= p._id %>/update" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
-                      <input type="file" name="logoimg" accept="image/*" class="form-control form-control-sm bg-dark text-light" required />
+                    <form
+                      action="/admin/plataformas/<%= p._id %>/update"
+                      method="POST"
+                      enctype="multipart/form-data"
+                      class="d-flex align-items-center gap-2"
+                    >
+                      <!-- ✅ Token CSRF -->
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input
+                        type="file"
+                        name="logoimg"
+                        accept="image/*"
+                        class="form-control form-control-sm bg-dark text-light"
+                        required
+                      />
                       <button class="btn btn-sm btn-outline-warning">Actualizar</button>
                     </form>
                   </td>
+
+                  <!-- Eliminar -->
                   <td>
-                    <form action="/admin/plataformas/<%= p._id %>/delete" method="POST" onsubmit="return confirm('¿Eliminar esta plataforma?')">
+                    <form
+                      action="/admin/plataformas/<%= p._id %>/delete"
+                      method="POST"
+                      onsubmit="return confirm('¿Eliminar esta plataforma?')"
+                    >
+                      <!-- ✅ Token CSRF -->
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                     </form>
                   </td>
