@@ -10,23 +10,27 @@
 
 <div class="row g-4 mt-1">
 
-  <!-- 🧾 RESUMEN -->
+  <!-- 🧾 RESUMEN GENERAL (MongoDB) -->
   <div class="col-lg-6">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
-        <h5>Resumen</h5>
+        <h5>Resumen General</h5>
         <div class="row text-center">
           <div class="col">
-            <div class="h4">$<%= (totSaldo && totSaldo.s) ? totSaldo.s : 0 %></div>
-            <div class="text-secondary small">Saldo total clientes</div>
+            <div class="h4"><%= stats ? stats.totalUsuarios : 0 %></div>
+            <div class="text-secondary small">Usuarios totales</div>
           </div>
           <div class="col">
-            <div class="h4">$<%= (totManualMes && totManualMes.s) ? totManualMes.s : 0 %></div>
-            <div class="text-secondary small">Ventas manuales (mes)</div>
+            <div class="h4 text-success"><%= stats ? stats.activos : 0 %></div>
+            <div class="text-secondary small">Activos</div>
           </div>
           <div class="col">
-            <div class="h4"><%= (totSubsAct && totSubsAct.c) ? totSubsAct.c : 0 %></div>
-            <div class="text-secondary small">Subs activas</div>
+            <div class="h4 text-danger"><%= stats ? stats.inactivos : 0 %></div>
+            <div class="text-secondary small">Inactivos</div>
+          </div>
+          <div class="col">
+            <div class="h4">$<%= stats ? stats.totalSaldo : 0 %></div>
+            <div class="text-secondary small">Saldo total</div>
           </div>
         </div>
       </div>
@@ -62,7 +66,7 @@
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-center mb-2">
-          <h5>Usuarios registrados</h5>
+          <h5>Usuarios registrados (MongoDB)</h5>
           <button class="btn btn-sm btn-outline-light" type="button" id="toggleUsuarios">Mostrar todos</button>
         </div>
 
@@ -70,36 +74,37 @@
           <table class="table table-dark table-sm align-middle mb-0">
             <thead>
               <tr>
-                <th>ID</th>
+                <th>#</th>
                 <th>Nombre</th>
                 <th>Correo</th>
+                <th>País</th>
                 <th>Saldo</th>
                 <th>Última conexión</th>
-                <th>Acciones</th>
+                <th>Registro</th>
               </tr>
             </thead>
             <tbody>
-              <% usuarios.forEach((u, index) => { %>
-                <tr class="<%= index >= 5 ? 'extra-usuario d-none' : '' %>">
-                  <td><%= u.id %></td>
-                  <td><%= u.nombre %> <%= u.apellido %></td>
-                  <td><%= u.correo %></td>
-                  <td>$<%= u.saldo %></td>
-                  <td>
-                    <% if (u.last_login) { %>
-                      <%= dayjs(u.last_login).format('DD/MM/YYYY HH:mm') %>
-                    <% } else { %>
-                      <span class="text-secondary">Nunca</span>
-                    <% } %>
-                  </td>
-                  <td>
-                    <form class="d-inline" method="POST" action="/admin/cliente/<%= u.id %>/eliminar" onsubmit="return confirm('¿Eliminar cliente?')">
-                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                      <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                    </form>
-                  </td>
-                </tr>
-              <% }) %>
+              <% if (usuarios && usuarios.length > 0) { %>
+                <% usuarios.forEach((u, index) => { %>
+                  <tr class="<%= index >= 5 ? 'extra-usuario d-none' : '' %>">
+                    <td><%= index + 1 %></td>
+                    <td><%= u.nombre %> <%= u.apellido %></td>
+                    <td><%= u.correo %></td>
+                    <td><%= u.pais || '-' %></td>
+                    <td>$<%= u.saldo || 0 %></td>
+                    <td>
+                      <% if (u.last_login) { %>
+                        <%= dayjs(u.last_login).format('DD/MM/YYYY HH:mm') %>
+                      <% } else { %>
+                        <span class="text-secondary">Nunca</span>
+                      <% } %>
+                    </td>
+                    <td><%= dayjs(u.created_at).format('DD/MM/YYYY') %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" class="text-center text-secondary">Sin usuarios registrados</td></tr>
+              <% } %>
             </tbody>
           </table>
         </div>
@@ -139,41 +144,45 @@
             </tr>
           </thead>
           <tbody>
-            <% productos.forEach(p => { %>
-              <tr>
-                <td>
-                  <% if (p.logo) { %>
-                    <img src="<%= p.logo %>" style="height:40px; border-radius:8px">
-                  <% } else { %>
-                    <span class="text-secondary">Sin logo</span>
-                  <% } %>
-                </td>
-                <td class="fw-bold"><%= p.nombre %></td>
+            <% if (productos && productos.length > 0) { %>
+              <% productos.forEach(p => { %>
+                <tr>
+                  <td>
+                    <% if (p.logo) { %>
+                      <img src="<%= p.logo %>" style="height:40px; border-radius:8px">
+                    <% } else { %>
+                      <span class="text-secondary">Sin logo</span>
+                    <% } %>
+                  </td>
+                  <td class="fw-bold"><%= p.nombre %></td>
 
-                <td>
-                  <% if (p.disponible) { %>
-                    <span class="text-success fw-bold">Sí</span>
-                  <% } else { %>
-                    <span class="text-danger fw-bold">No</span>
-                  <% } %>
-                </td>
+                  <td>
+                    <% if (p.disponible) { %>
+                      <span class="text-success fw-bold">Sí</span>
+                    <% } else { %>
+                      <span class="text-danger fw-bold">No</span>
+                    <% } %>
+                  </td>
 
-                <td>
-                  <form method="POST" action="/admin/plataforma/<%= p.id %>/logo" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <input type="file" name="logoimg" accept="image/*" class="form-control form-control-sm bg-dark text-light" required>
-                    <button class="btn btn-sm btn-outline-warning">Actualizar</button>
-                  </form>
-                </td>
+                  <td>
+                    <form method="POST" action="/admin/plataforma/<%= p.id %>/logo" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <input type="file" name="logoimg" accept="image/*" class="form-control form-control-sm bg-dark text-light" required>
+                      <button class="btn btn-sm btn-outline-warning">Actualizar</button>
+                    </form>
+                  </td>
 
-                <td>
-                  <form method="POST" action="/admin/plataforma/<%= p.id %>/eliminar" onsubmit="return confirm('¿Eliminar esta plataforma?')">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                  </form>
-                </td>
-              </tr>
-            <% }) %>
+                  <td>
+                    <form method="POST" action="/admin/plataforma/<%= p.id %>/eliminar" onsubmit="return confirm('¿Eliminar esta plataforma?')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } else { %>
+              <tr><td colspan="5" class="text-center text-secondary">No hay plataformas registradas</td></tr>
+            <% } %>
           </tbody>
         </table>
       </div>
@@ -193,8 +202,6 @@
     container.style.maxHeight = abierto ? '600px' : '250px';
     container.style.overflowY = abierto ? 'auto' : 'hidden';
     btnToggle.textContent = abierto ? 'Ocultar' : 'Mostrar todos';
-
-    // 🧠 UX: volver al tope al cerrar
     if (!abierto) container.scrollTo({ top: 0, behavior: 'smooth' });
   });
 </script>
