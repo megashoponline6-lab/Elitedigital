@@ -1,4 +1,4 @@
-// ✅ server.js (versión final con manejo de plataformas + última conexión y registro permanente)
+// ✅ server.js — versión final con integración MongoDB para usuarios y SQLite para lo demás
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -16,9 +16,10 @@ import fs from 'fs';
 import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
-// 🧩 MongoDB + Rutas de gestión de cuentas
+// 🧩 MongoDB + rutas de gestión
 import mongoose from 'mongoose';
 import adminAccountsRoutes from './routes/adminAccounts.js';
+import User from './models/User.js';
 
 dotenv.config();
 
@@ -88,25 +89,11 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧱 Tablas
+// 🧱 Tablas SQLite
 await run(`CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   usuario TEXT UNIQUE,
   passhash TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT,
-  apellido TEXT,
-  pais TEXT,
-  telefono TEXT,
-  correo TEXT UNIQUE,
-  passhash TEXT,
-  saldo INTEGER DEFAULT 0,
-  activo INTEGER DEFAULT 1,
-  last_login TEXT,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );`);
 
@@ -206,7 +193,7 @@ app.get('/catalogo', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// 📝 Registro
+// 📝 Registro (MongoDB)
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
@@ -216,7 +203,8 @@ function normalizeEmail(correo) {
   if (m) return m[1] + m[3];
   return correo;
 }
-app.post('/registro',
+app.post(
+  '/registro',
   csrfProtection,
   body('nombre').notEmpty(),
   body('apellido').notEmpty(),
@@ -227,40 +215,72 @@ app.post('/registro',
     const errores = validationResult(req);
     if (!errores.isEmpty())
       return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
-    const existe = await get(`SELECT id FROM users WHERE lower(correo)=?;`, [correo]);
-    if (existe)
-      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Ese correo ya está registrado.' }] });
-    const passhash = await bcrypt.hash(password, 10);
-    await run(`INSERT INTO users (nombre, apellido, pais, telefono, correo, passhash) VALUES (?,?,?,?,?,?);`,
-      [nombre, apellido, pais, telefono || '', correo, passhash]);
-    res.redirect('/login?ok=Registro completado');
+
+    try {
+      const existe = await User.findOne({ correo: correo.toLowerCase() });
+      if (existe)
+        return res.status(400).render('registro', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Ese correo ya está registrado.' }],
+        });
+
+      const passhash = await bcrypt.hash(password, 10);
+      await User.create({
+        nombre,
+        apellido,
+        pais,
+        telefono: telefono || '',
+        correo: correo.toLowerCase(),
+        passhash,
+      });
+
+      res.redirect('/login?ok=Registro completado');
+    } catch (err) {
+      console.error('❌ Error en registro MongoDB:', err);
+      res.status(500).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Error interno del servidor.' }] });
+    }
   }
 );
 
-// 👤 Login clientes
+// 👤 Login clientes (MongoDB)
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
 });
-app.post('/login',
+app.post(
+  '/login',
   csrfProtection,
   body('correo').isEmail(),
   body('password').notEmpty(),
   async (req, res) => {
     const correo = normalizeEmail(req.body.correo);
-    const u = await get(`SELECT * FROM users WHERE lower(correo)=? AND activo=1;`, [correo]);
-    if (!u)
-      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }] });
-    const ok = await bcrypt.compare(req.body.password, u.passhash);
-    if (!ok)
-      return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
-    
-    req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
-    await run(`UPDATE users SET last_login = datetime('now') WHERE id=?;`, [u.id]);
 
-    res.redirect('/panel?ok=Bienvenido');
+    try {
+      const u = await User.findOne({ correo: correo.toLowerCase(), activo: true }).lean();
+      if (!u)
+        return res.status(400).render('login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }],
+        });
+
+      const ok = await bcrypt.compare(req.body.password, u.passhash);
+      if (!ok)
+        return res.status(400).render('login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Credenciales inválidas' }],
+        });
+
+      req.session.user = { id: u._id.toString(), nombre: u.nombre, correo: u.correo };
+      await User.updateOne({ _id: u._id }, { last_login: new Date() });
+
+      res.redirect('/panel?ok=Bienvenido');
+    } catch (err) {
+      console.error('❌ Error en login MongoDB:', err);
+      res.status(500).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Error interno del servidor' }] });
+    }
   }
 );
 
@@ -269,19 +289,16 @@ app.use(adminAccountsRoutes);
 
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
-  const user = await get(`SELECT * FROM users WHERE id=?;`, [req.session.user.id]);
-  const sub = await get(
-    `SELECT s.*, p.nombre as prod_nombre FROM subscriptions s
-     LEFT JOIN products p ON p.id=s.product_id
-     WHERE s.user_id=? ORDER BY s.id DESC LIMIT 1;`,
-    [user.id]
-  );
-  const dias = sub ? Math.ceil((new Date(sub.vence_en) - new Date()) / (1000 * 60 * 60 * 24)) : null;
-  const tickets = await all(`SELECT * FROM tickets WHERE user_id=? ORDER BY id DESC;`, [user.id]);
-  res.render('panel', { csrfToken: req.csrfToken(), user, sub, dias, tickets });
+  try {
+    const user = await User.findById(req.session.user.id).lean();
+    res.render('panel', { csrfToken: req.csrfToken(), user, sub: null, dias: null, tickets: [] });
+  } catch (err) {
+    console.error('❌ Error en panel usuario:', err);
+    res.redirect('/login?error=Reinicia tu sesión');
+  }
 });
 
-// 💬 Tickets
+// 💬 Tickets (mantiene SQLite)
 app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
   let ticketId = req.body.ticket_id;
   if (!ticketId) {
@@ -292,7 +309,7 @@ app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), asy
   res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
-// 🔑 Admin
+// 🔑 Admin y plataformas (SQLite)
 app.get('/admin', csrfProtection, async (req, res) => {
   delete req.session.user;
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
@@ -309,72 +326,15 @@ app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').
 });
 app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
-// 📊 Panel admin
+// 📊 Panel admin (SQLite)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
-    const usuarios = await all(`SELECT id, nombre, apellido, correo, saldo, activo, last_login FROM users ORDER BY id DESC;`);
+    const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
-    const totSaldo = await get(`SELECT SUM(saldo) as s FROM users;`);
-    const totManualMes = await get(`SELECT SUM(monto) as s FROM manual_sales WHERE strftime('%Y-%m', fecha)=strftime('%Y-%m','now');`);
-    const totSubsAct = await get(`SELECT COUNT(*) as c FROM subscriptions WHERE date(vence_en) >= date('now');`);
-    res.render('admin/panel', { csrfToken: req.csrfToken(), usuarios, productos, totSaldo, totManualMes, totSubsAct });
+    res.render('admin/panel', { csrfToken: req.csrfToken(), usuarios, productos });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
     next(err);
-  }
-});
-
-// 💰 Recargar saldo (por correo)
-app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    const { correo, monto, nota } = req.body;
-    const user = await get(`SELECT id, saldo FROM users WHERE lower(correo)=?;`, [correo.toLowerCase()]);
-    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
-    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
-    await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, user.id]);
-    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user.id, parseInt(monto), nota || 'Recarga manual']);
-    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
-  } catch (err) {
-    console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error al recargar saldo');
-  }
-});
-
-// 🎬 Añadir plataforma
-app.post('/admin/plataforma', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
-  try {
-    const { nombre } = req.body;
-    if (!nombre || !req.file) return res.redirect('/admin/panel?error=Faltan datos');
-    const logoPath = `/public/uploads/${req.file.filename}`;
-    await run(`INSERT INTO products (nombre, logo, activo, disponible) VALUES (?,?,1,1);`, [nombre, logoPath]);
-    res.redirect('/admin/panel?ok=Plataforma añadida');
-  } catch (err) {
-    console.error('❌ Error al añadir plataforma:', err);
-    res.redirect('/admin/panel?error=Error al añadir');
-  }
-});
-
-// 🖼️ Cambiar logo
-app.post('/admin/plataforma/:id/logo', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
-  try {
-    if (!req.file) return res.redirect('/admin/panel?error=Sin archivo');
-    const logoPath = `/public/uploads/${req.file.filename}`;
-    await run(`UPDATE products SET logo=? WHERE id=?;`, [logoPath, parseInt(req.params.id)]);
-    res.redirect('/admin/panel?ok=Logo actualizado');
-  } catch (err) {
-    console.error('❌ Error al actualizar logo:', err);
-    res.redirect('/admin/panel?error=Error al cambiar logo');
-  }
-});
-
-// ❌ Eliminar plataforma
-app.post('/admin/plataforma/:id/eliminar', requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    await run(`DELETE FROM products WHERE id=?;`, [parseInt(req.params.id)]);
-    res.redirect('/admin/panel?ok=Plataforma eliminada');
-  } catch (err) {
-    console.error('❌ Error al eliminar plataforma:', err);
-    res.redirect('/admin/panel?error=Error al eliminar');
   }
 });
 
