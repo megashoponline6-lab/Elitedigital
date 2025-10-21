@@ -1,0 +1,131 @@
+<%- include('../partials/errors') %>
+<%- include('../partials/success') %>
+
+<div class="container mt-4 text-light">
+  <h1 class="mb-4">🎛️ Gestión de Cuentas</h1>
+
+  <!-- Formulario para agregar nueva cuenta -->
+  <div class="card bg-dark mb-4 border-secondary shadow">
+    <div class="card-header border-secondary">
+      <h5 class="mb-0">➕ Agregar nueva cuenta</h5>
+    </div>
+    <div class="card-body">
+      <form action="/admin/cuentas" method="POST">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-3">
+            <label class="form-label">Plataforma</label>
+            <select name="platform" class="form-select bg-dark text-light border-secondary" required>
+              <option value="">Seleccionar...</option>
+              <% platforms.forEach(p => { %>
+                <option value="<%= p._id %>" <%= filters.platformId == p._id ? 'selected' : '' %>><%= p.name %></option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Correo</label>
+            <input type="email" name="email" class="form-control bg-dark text-light border-secondary" required />
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Contraseña</label>
+            <input type="text" name="password" class="form-control bg-dark text-light border-secondary" required />
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Cupos</label>
+            <input type="number" name="slots" min="1" value="1" class="form-control bg-dark text-light border-secondary" required />
+          </div>
+
+          <div class="col-md-1 text-end">
+            <button type="submit" class="btn btn-danger mt-4 w-100">Guardar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla de cuentas -->
+  <div class="card bg-dark border-secondary shadow">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">📋 Cuentas registradas</h5>
+      <form method="get" action="/admin/cuentas" class="d-flex align-items-center gap-2">
+        <select name="platform" class="form-select bg-dark text-light border-secondary" onchange="this.form.submit()">
+          <option value="all">Todas las plataformas</option>
+          <% platforms.forEach(p => { %>
+            <option value="<%= p._id %>" <%= filters.platformId == p._id ? 'selected' : '' %>><%= p.name %></option>
+          <% }) %>
+        </select>
+        <input type="text" name="q" value="<%= filters.q %>" placeholder="Buscar correo..." class="form-control bg-dark text-light border-secondary">
+        <button type="submit" class="btn btn-warning">Filtrar</button>
+      </form>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Plataforma</th>
+              <th>Correo</th>
+              <th>Contraseña</th>
+              <th>Cupos</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (accounts.length === 0) { %>
+              <tr>
+                <td colspan="6" class="text-center text-secondary py-4">
+                  No hay cuentas registradas
+                </td>
+              </tr>
+            <% } else { %>
+              <% accounts.forEach(acc => { %>
+                <tr>
+                  <td><%= acc.platform ? acc.platform.name : 'Sin plataforma' %></td>
+                  <td><%= acc.email %></td>
+                  <td>
+                    <span class="password-mask" data-pass="<%= acc.password %>">•••••••</span>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-show-pass">👁️</button>
+                  </td>
+                  <td><%= acc.slots %></td>
+                  <td>
+                    <% if (acc.active) { %>
+                      <span class="badge bg-success">Activa</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">Inactiva</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <form action="/admin/cuentas/<%= acc._id %>/update" method="POST" class="d-inline">
+                      <input type="hidden" name="active" value="<%= !acc.active %>">
+                      <button class="btn btn-sm <%= acc.active ? 'btn-secondary' : 'btn-success' %>">
+                        <%= acc.active ? 'Desactivar' : 'Activar' %>
+                      </button>
+                    </form>
+                    <form action="/admin/cuentas/<%= acc._id %>/delete" method="POST" class="d-inline">
+                      <button class="btn btn-sm btn-danger" onclick="return confirm('¿Eliminar esta cuenta?')">Eliminar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Script para mostrar/ocultar contraseñas -->
+<script>
+  document.querySelectorAll('.btn-show-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const span = btn.previousElementSibling;
+      const hidden = span.textContent.includes('•');
+      span.textContent = hidden ? span.dataset.pass : '•••••••';
+      btn.textContent = hidden ? '🙈' : '👁️';
+    });
+  });
+</script>
