@@ -13,7 +13,9 @@
     </div>
     <div class="card-body">
       <form action="/admin/cuentas" method="POST">
+        <!-- ✅ Token CSRF -->
         <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
+
         <div class="row g-3 align-items-center">
           <!-- Plataforma -->
           <div class="col-md-3">
@@ -133,8 +135,13 @@
             <% } else { %>
               <% accounts.forEach(acc => { %>
                 <tr>
+                  <!-- Plataforma -->
                   <td><%= acc.platform ? (acc.platform.name || acc.platform.nombre) : 'Sin plataforma' %></td>
+
+                  <!-- Correo -->
                   <td><%= acc.email %></td>
+
+                  <!-- Contraseña con toggle -->
                   <td>
                     <span class="password-mask" data-pass="<%= acc.password %>">•••••••</span>
                     <button
@@ -145,7 +152,11 @@
                       👁️
                     </button>
                   </td>
+
+                  <!-- Cupos -->
                   <td><%= acc.slots %></td>
+
+                  <!-- Estado -->
                   <td>
                     <% if (acc.active) { %>
                       <span class="badge bg-success">Activa</span>
@@ -153,6 +164,8 @@
                       <span class="badge bg-secondary">Inactiva</span>
                     <% } %>
                   </td>
+
+                  <!-- Acciones -->
                   <td>
                     <!-- ACTIVAR/DESACTIVAR -->
                     <form
@@ -160,6 +173,7 @@
                       method="POST"
                       class="d-inline"
                     >
+                      <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <input type="hidden" name="active" value="<%= !acc.active %>" />
                       <button
@@ -175,6 +189,7 @@
                       method="POST"
                       class="d-inline"
                     >
+                      <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <button
                         class="btn btn-sm btn-danger"
