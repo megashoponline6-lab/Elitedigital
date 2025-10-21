@@ -1,11 +1,11 @@
-// controllers/adminAccountsController.js
-const Account = require('../models/Account');
-const Platform = require('../models/Platform');
+// ✅ controllers/adminAccountsController.js (versión ESM lista para Render)
+import Account from '../models/Account.js';
+import Platform from '../models/Platform.js';
 
 /**
  * Muestra la vista principal de gestión de cuentas
  */
-exports.view = async (req, res) => {
+export const view = async (req, res) => {
   try {
     // Trae todas las plataformas para el menú desplegable
     const platforms = await Platform.find({}).sort({ name: 1 }).lean();
@@ -33,7 +33,7 @@ exports.view = async (req, res) => {
       filters: { platformId: platformId || 'all', q: q || '' }
     });
   } catch (err) {
-    console.error('Error al mostrar gestión de cuentas:', err);
+    console.error('❌ Error al mostrar gestión de cuentas:', err);
     res.status(500).send('Error cargando gestión de cuentas');
   }
 };
@@ -41,7 +41,7 @@ exports.view = async (req, res) => {
 /**
  * Crea una nueva cuenta
  */
-exports.create = async (req, res) => {
+export const create = async (req, res) => {
   try {
     const { platform, email, password, slots } = req.body;
     if (!platform || !email || !password || !slots) {
@@ -58,7 +58,7 @@ exports.create = async (req, res) => {
 
     res.redirect('/admin/cuentas');
   } catch (err) {
-    console.error('Error al crear cuenta:', err);
+    console.error('❌ Error al crear cuenta:', err);
     res.status(500).send('No se pudo crear la cuenta');
   }
 };
@@ -66,7 +66,7 @@ exports.create = async (req, res) => {
 /**
  * Actualiza una cuenta existente
  */
-exports.update = async (req, res) => {
+export const update = async (req, res) => {
   try {
     const { id } = req.params;
     const { email, password, slots, active } = req.body;
@@ -80,7 +80,7 @@ exports.update = async (req, res) => {
 
     res.redirect('/admin/cuentas');
   } catch (err) {
-    console.error('Error al actualizar cuenta:', err);
+    console.error('❌ Error al actualizar cuenta:', err);
     res.status(500).send('No se pudo actualizar la cuenta');
   }
 };
@@ -88,13 +88,13 @@ exports.update = async (req, res) => {
 /**
  * Elimina una cuenta
  */
-exports.remove = async (req, res) => {
+export const remove = async (req, res) => {
   try {
     const { id } = req.params;
     await Account.findByIdAndDelete(id);
     res.redirect('/admin/cuentas');
   } catch (err) {
-    console.error('Error al eliminar cuenta:', err);
+    console.error('❌ Error al eliminar cuenta:', err);
     res.status(500).send('No se pudo eliminar la cuenta');
   }
 };
@@ -102,7 +102,7 @@ exports.remove = async (req, res) => {
 /**
  * Función auxiliar: Selecciona cuentas aleatorias sin repetir
  */
-exports.pickRandomAccounts = async (platformId, count = 1) => {
+export const pickRandomAccounts = async (platformId, count = 1) => {
   try {
     const pool = await Account.find({
       platform: platformId,
@@ -129,7 +129,7 @@ exports.pickRandomAccounts = async (platformId, count = 1) => {
 
     return selected;
   } catch (err) {
-    console.error('Error al seleccionar cuentas aleatorias:', err);
+    console.error('❌ Error al seleccionar cuentas aleatorias:', err);
     return [];
   }
 };
