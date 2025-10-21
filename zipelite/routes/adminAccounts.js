@@ -1,5 +1,6 @@
 // ✅ routes/adminAccounts.js — Versión final lista para Render (ESM)
 import express from 'express';
+import csrf from 'csurf';
 import {
   view,
   create,
@@ -8,6 +9,7 @@ import {
 } from '../controllers/adminAccountsController.js';
 
 const router = express.Router();
+const csrfProtection = csrf({ cookie: true });
 
 /**
  * 🛡️ Middleware de autenticación (temporal)
@@ -15,7 +17,7 @@ const router = express.Router();
  */
 const ensureAdmin = (req, res, next) => {
   // Si más adelante usas sesiones, aquí podrás validar el rol admin:
-  // if (!req.session?.isAdmin) return res.redirect('/login');
+  // if (!req.session?.admin) return res.redirect('/admin');
   next();
 };
 
@@ -24,16 +26,16 @@ const ensureAdmin = (req, res, next) => {
  */
 
 // 🔹 Vista principal: listado + formulario
-router.get('/admin/cuentas', ensureAdmin, view);
+router.get('/admin/cuentas', ensureAdmin, csrfProtection, view);
 
 // 🔹 Crear nueva cuenta
-router.post('/admin/cuentas', ensureAdmin, create);
+router.post('/admin/cuentas', ensureAdmin, csrfProtection, create);
 
 // 🔹 Actualizar una cuenta existente
-router.post('/admin/cuentas/:id/update', ensureAdmin, update);
+router.post('/admin/cuentas/:id/update', ensureAdmin, csrfProtection, update);
 
 // 🔹 Eliminar una cuenta
-router.post('/admin/cuentas/:id/delete', ensureAdmin, remove);
+router.post('/admin/cuentas/:id/delete', ensureAdmin, csrfProtection, remove);
 
 /**
  * 🚀 Exportación por defecto
