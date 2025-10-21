@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets) + Sistema de Ventas
+// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets) + Sistema de Ventas + Gestión de Cuentas
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -19,8 +19,9 @@ import expressLayouts from 'express-ejs-layouts';
 // 🧩 MongoDB + rutas de gestión y ventas
 import mongoose from 'mongoose';
 import adminAccountsRoutes from './routes/adminAccounts.js';
-import salesRoutes from './routes/sales.js'; // ✅ nueva ruta añadida
+import salesRoutes from './routes/sales.js';
 import User from './models/User.js';
+import Account from './models/Account.js'; // ✅ añadido para contador de cuentas
 
 dotenv.config();
 
@@ -305,7 +306,7 @@ app.post(
 app.use(adminAccountsRoutes);
 
 // 🛒 Sistema de Ventas (MongoDB)
-app.use(salesRoutes); // ✅ integración añadida aquí
+app.use(salesRoutes);
 
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
@@ -354,11 +355,14 @@ app.get('/admin/salir', (req, res) => {
   res.redirect('/admin?ok=Sesión cerrada');
 });
 
-// 📊 Panel admin (MongoDB + SQLite con resumen)
+// 📊 Panel admin (MongoDB + SQLite con resumen + cuentas)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
+
+    // 🔢 Contador total de cuentas (MongoDB)
+    const totalAccounts = await Account.countDocuments();
 
     const totalUsuarios = usuarios.length;
     const activos = usuarios.filter(u => u.activo).length;
@@ -369,7 +373,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
       csrfToken: req.csrfToken(),
       usuarios,
       productos,
-      stats: { totalUsuarios, activos, inactivos, totalSaldo }
+      stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts }
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
