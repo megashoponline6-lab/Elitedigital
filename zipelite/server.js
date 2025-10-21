@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con MongoDB Atlas + SQLite + Gestión de Cuentas y Plataformas + Sistema de Ventas
+// ✅ server.js — versión final con MongoDB Atlas + SQLite + Gestión de Cuentas y Plataformas + Sistema de Ventas + Rutas /admin y /logout
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -93,7 +93,7 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧱 Tablas SQLite (tickets, productos, etc.)
+// 🧱 Tablas SQLite (admins, productos, etc.)
 await run(`CREATE TABLE IF NOT EXISTS admins (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   usuario TEXT UNIQUE,
@@ -288,9 +288,49 @@ app.post(
   }
 );
 
+// 👑 Login administrador (SQLite)
+app.get('/admin', csrfProtection, (req, res) => {
+  delete req.session.user;
+  res.render('adminLogin', { csrfToken: req.csrfToken(), errores: [] });
+});
+
+app.post(
+  '/admin',
+  csrfProtection,
+  body('usuario').notEmpty(),
+  body('password').notEmpty(),
+  async (req, res) => {
+    try {
+      const { usuario, password } = req.body;
+      const admin = await get(`SELECT * FROM admins WHERE usuario = ?;`, [usuario]);
+      if (!admin)
+        return res.status(400).render('adminLogin', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Usuario no encontrado' }],
+        });
+
+      const ok = await bcrypt.compare(password, admin.passhash);
+      if (!ok)
+        return res.status(400).render('adminLogin', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Contraseña incorrecta' }],
+        });
+
+      req.session.admin = { id: admin.id, usuario: admin.usuario };
+      res.redirect('/admin/panel?ok=Bienvenido');
+    } catch (err) {
+      console.error('❌ Error en login admin:', err);
+      res.status(500).render('adminLogin', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor' }],
+      });
+    }
+  }
+);
+
 // ⚙️ Rutas de administración MongoDB
 app.use(adminAccountsRoutes);
-app.use(adminPlatformsRoutes); // ✅ NUEVO
+app.use(adminPlatformsRoutes);
 app.use(salesRoutes);
 
 // 👤 Panel usuario
@@ -310,7 +350,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
     const totalAccounts = await Account.countDocuments();
-    const totalPlatforms = await Platform.countDocuments(); // ✅ NUEVO
+    const totalPlatforms = await Platform.countDocuments();
 
     const totalUsuarios = usuarios.length;
     const activos = usuarios.filter(u => u.activo).length;
@@ -334,23 +374,25 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
     const user = await User.findOne({ correo: correo.toLowerCase() });
-
     if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
 
     const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
     await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
 
-    await run(
-      `INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`,
-      [user._id.toString(), parseInt(monto), nota || 'Recarga manual']
-    );
-
+    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user._id.toString(), parseInt(monto), nota || 'Recarga manual']);
     console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo}`);
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
     res.redirect('/admin/panel?error=Error al recargar saldo');
   }
+});
+
+// 🚪 Logout (usuarios y administradores)
+app.get('/logout', (req, res) => {
+  req.session.destroy(() => {
+    res.redirect('/login?ok=Sesión cerrada correctamente');
+  });
 });
 
 // 404 y 500
