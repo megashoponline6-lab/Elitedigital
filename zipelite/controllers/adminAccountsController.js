@@ -30,6 +30,7 @@ export const view = async (req, res) => {
       accounts,
       filters: { platformId: platformId || 'all', q: q || '' },
       csrfToken: req.csrfToken(),
+      errores: [] // ✅ evita ReferenceError en el partial
     });
   } catch (err) {
     console.error('❌ Error al mostrar gestión de cuentas:', err);
@@ -38,8 +39,8 @@ export const view = async (req, res) => {
       platforms: [],
       accounts: [],
       filters: { platformId: 'all', q: '' },
-      csrfToken: req.csrfToken(),
-      error: 'Error interno al cargar cuentas',
+      csrfToken: req.csrfToken ? req.csrfToken() : '',
+      errores: [{ msg: 'Error interno al cargar cuentas.' }]
     });
   }
 };
@@ -60,7 +61,7 @@ export const create = async (req, res) => {
       email: email.trim().toLowerCase(),
       password,
       slots: Number(slots),
-      active: true,
+      active: true
     });
 
     console.log(`✅ Cuenta creada: ${email}`);
@@ -83,7 +84,7 @@ export const update = async (req, res) => {
       ...(email ? { email: email.trim().toLowerCase() } : {}),
       ...(password ? { password } : {}),
       ...(slots ? { slots: Number(slots) } : {}),
-      active: active === 'true' || active === true,
+      active: active === 'true' || active === true
     });
 
     if (!updated) {
@@ -126,7 +127,7 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
     const pool = await Account.find({
       platform: platformId,
       active: true,
-      slots: { $gt: 0 },
+      slots: { $gt: 0 }
     }).lean();
 
     if (!pool.length) return [];
