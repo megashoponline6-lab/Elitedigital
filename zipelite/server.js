@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con integración MongoDB para usuarios y SQLite para lo demás
+// ✅ server.js — versión final con MongoDB Atlas (usuarios) + SQLite (productos/tickets)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -42,7 +42,7 @@ app.set('views', path.join(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
-// 🛡 Seguridad, logs, middlewares
+// 🛡 Seguridad, logs y middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
@@ -62,7 +62,7 @@ if (process.env.MONGODB_URI) {
   console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
-// 📝 Sesiones
+// 🧠 Sesiones
 app.use(
   session({
     store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }),
@@ -75,7 +75,7 @@ app.use(
 
 const csrfProtection = csrf({ cookie: true });
 
-// 🔒 Middlewares
+// 🔒 Middlewares de acceso
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
@@ -164,7 +164,10 @@ if (c.c === 0) {
   if (fs.existsSync(seedPath)) {
     const seed = JSON.parse(fs.readFileSync(seedPath, 'utf-8'));
     for (const [nombre, etiqueta, precio, logo] of seed) {
-      await run(`INSERT INTO products(nombre, etiqueta, precio, logo) VALUES (?,?,?,?);`, [nombre, etiqueta, precio, logo]);
+      await run(
+        `INSERT INTO products(nombre, etiqueta, precio, logo) VALUES (?,?,?,?);`,
+        [nombre, etiqueta, precio, logo]
+      );
     }
   }
 }
@@ -182,7 +185,9 @@ app.get('/', async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('home', { productos, etiquetas: [], filtro: '' });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 // 🛍 Catálogo
@@ -190,19 +195,23 @@ app.get('/catalogo', async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
     res.render('catalogo', { productos, etiquetas: [], filtro: '' });
-  } catch (e) { next(e); }
+  } catch (e) {
+    next(e);
+  }
 });
 
 // 📝 Registro (MongoDB)
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
+
 function normalizeEmail(correo) {
   correo = (correo || '').trim().toLowerCase();
   const m = correo.match(/^([^@+]+)(\+[^@]+)?(@gmail\.com)$/);
   if (m) return m[1] + m[3];
   return correo;
 }
+
 app.post(
   '/registro',
   csrfProtection,
@@ -240,7 +249,10 @@ app.post(
       res.redirect('/login?ok=Registro completado');
     } catch (err) {
       console.error('❌ Error en registro MongoDB:', err);
-      res.status(500).render('registro', { csrfToken: req.csrfToken(), errores: [{ msg: 'Error interno del servidor.' }] });
+      res.status(500).render('registro', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor.' }],
+      });
     }
   }
 );
@@ -250,6 +262,7 @@ app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
 });
+
 app.post(
   '/login',
   csrfProtection,
@@ -279,12 +292,15 @@ app.post(
       res.redirect('/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login MongoDB:', err);
-      res.status(500).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Error interno del servidor' }] });
+      res.status(500).render('login', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor' }],
+      });
     }
   }
 );
 
-// ⚙️ Nueva sección: Gestión de Cuentas (MongoDB)
+// ⚙️ Gestión de Cuentas (MongoDB)
 app.use(adminAccountsRoutes);
 
 // 👤 Panel usuario
@@ -298,24 +314,28 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 💬 Tickets (mantiene SQLite)
+// 💬 Tickets (SQLite)
 app.post('/ticket', csrfProtection, requireAuth, body('mensaje').notEmpty(), async (req, res) => {
   let ticketId = req.body.ticket_id;
   if (!ticketId) {
     const t = await run(`INSERT INTO tickets (user_id) VALUES (?);`, [req.session.user.id]);
     ticketId = t.lastID;
   }
-  await run(`INSERT INTO ticket_messages (ticket_id, autor, mensaje) VALUES (?,?,?);`, [ticketId, 'cliente', req.body.mensaje]);
+  await run(
+    `INSERT INTO ticket_messages (ticket_id, autor, mensaje) VALUES (?,?,?);`,
+    [ticketId, 'cliente', req.body.mensaje]
+  );
   res.redirect('/panel?ok=Mensaje enviado#soporte');
 });
 
-// 🔑 Admin y plataformas (SQLite)
+// 🔑 Admin (SQLite)
 app.get('/admin', csrfProtection, async (req, res) => {
   delete req.session.user;
   const c = await get(`SELECT COUNT(*) as c FROM admins;`);
   if (c.c === 0) return res.redirect('/admin/setup');
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
 });
+
 app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').notEmpty(), async (req, res) => {
   const a = await get(`SELECT * FROM admins WHERE usuario=?;`, [req.body.usuario]);
   if (!a) return res.redirect('/admin?error=Credenciales');
@@ -324,9 +344,13 @@ app.post('/admin', csrfProtection, body('usuario').notEmpty(), body('password').
   req.session.admin = { id: a.id, usuario: a.usuario };
   res.redirect('/admin/panel?ok=Bienvenido');
 });
-app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('/admin?ok=Sesión cerrada'); });
 
-// 📊 Panel admin (SQLite)
+app.get('/admin/salir', (req, res) => {
+  delete req.session.admin;
+  res.redirect('/admin?ok=Sesión cerrada');
+});
+
+// 📊 Panel admin (MongoDB + SQLite)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
@@ -338,15 +362,13 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
   }
 });
 
-// 404
+// 404 y 500
 app.use((req, res) => res.status(404).render('404'));
-
-// 500
 app.use((err, req, res, next) => {
   console.error('❌ Error interno:', err);
   res.status(500).send('Error Interno del Servidor');
 });
 
-// 🚀 Start
+// 🚀 Inicio
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
