@@ -61,34 +61,48 @@
   <div class="col-lg-12">
     <div class="card bg-black border-secondary rounded-4">
       <div class="card-body">
-        <h5>Usuarios recientes</h5>
-        <table class="table table-dark table-sm align-middle">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Correo</th>
-              <th>Saldo</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <% usuarios.forEach(u => { %>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5>Usuarios registrados</h5>
+          <button class="btn btn-sm btn-outline-light" type="button" id="toggleUsuarios">Mostrar todos</button>
+        </div>
+
+        <div id="usuariosContainer" style="max-height:250px; overflow-y:hidden; transition:all 0.3s ease;">
+          <table class="table table-dark table-sm align-middle mb-0">
+            <thead>
               <tr>
-                <td><%= u.id %></td>
-                <td><%= u.nombre %> <%= u.apellido %></td>
-                <td><%= u.correo %></td>
-                <td>$<%= u.saldo %></td>
-                <td>
-                  <form class="d-inline" method="POST" action="/admin/cliente/<%= u.id %>/eliminar" onsubmit="return confirm('¿Eliminar cliente?')">
-                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                    <button class="btn btn-sm btn-outline-danger">Eliminar</button>
-                  </form>
-                </td>
+                <th>ID</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>Saldo</th>
+                <th>Última conexión</th>
+                <th>Acciones</th>
               </tr>
-            <% }) %>
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              <% usuarios.forEach((u, index) => { %>
+                <tr class="<%= index >= 5 ? 'extra-usuario d-none' : '' %>">
+                  <td><%= u.id %></td>
+                  <td><%= u.nombre %> <%= u.apellido %></td>
+                  <td><%= u.correo %></td>
+                  <td>$<%= u.saldo %></td>
+                  <td>
+                    <% if (u.last_login) { %>
+                      <%= dayjs(u.last_login).format('DD/MM/YYYY HH:mm') %>
+                    <% } else { %>
+                      <span class="text-secondary">Nunca</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <form class="d-inline" method="POST" action="/admin/cliente/<%= u.id %>/eliminar" onsubmit="return confirm('¿Eliminar cliente?')">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -136,7 +150,6 @@
                 </td>
                 <td class="fw-bold"><%= p.nombre %></td>
 
-                <!-- Mostrar si hay cuentas disponibles -->
                 <td>
                   <% if (p.disponible) { %>
                     <span class="text-success fw-bold">Sí</span>
@@ -145,7 +158,6 @@
                   <% } %>
                 </td>
 
-                <!-- Cambiar logo -->
                 <td>
                   <form method="POST" action="/admin/plataforma/<%= p.id %>/logo" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -154,7 +166,6 @@
                   </form>
                 </td>
 
-                <!-- Eliminar -->
                 <td>
                   <form method="POST" action="/admin/plataforma/<%= p.id %>/eliminar" onsubmit="return confirm('¿Eliminar esta plataforma?')">
                     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -169,3 +180,21 @@
     </div>
   </div>
 </div>
+
+<script>
+  const btnToggle = document.getElementById('toggleUsuarios');
+  const container = document.getElementById('usuariosContainer');
+  const extras = document.querySelectorAll('.extra-usuario');
+  let abierto = false;
+
+  btnToggle.addEventListener('click', () => {
+    abierto = !abierto;
+    extras.forEach(row => row.classList.toggle('d-none', !abierto));
+    container.style.maxHeight = abierto ? '600px' : '250px';
+    container.style.overflowY = abierto ? 'auto' : 'hidden';
+    btnToggle.textContent = abierto ? 'Ocultar' : 'Mostrar todos';
+
+    // 🧠 UX: volver al tope al cerrar
+    if (!abierto) container.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
