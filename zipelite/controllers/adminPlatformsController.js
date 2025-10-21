@@ -8,15 +8,18 @@ export const view = async (req, res) => {
   try {
     const platforms = await Platform.find({}).sort({ createdAt: -1 }).lean();
     res.render('admin/admin-platforms', {
+      title: 'Gestión de Plataformas',
       platforms,
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken(),
+      errores: [] // ✅ evita ReferenceError
     });
   } catch (err) {
     console.error('❌ Error al cargar plataformas:', err);
     res.status(500).render('admin/admin-platforms', {
+      title: 'Gestión de Plataformas',
       platforms: [],
-      error: 'Error al cargar las plataformas.',
-      csrfToken: req.csrfToken()
+      csrfToken: req.csrfToken ? req.csrfToken() : '',
+      errores: [{ msg: 'Error al cargar las plataformas.' }]
     });
   }
 };
