@@ -13,6 +13,7 @@
     </div>
     <div class="card-body">
       <form action="/admin/cuentas" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
         <div class="row g-3 align-items-center">
           <!-- Plataforma -->
           <div class="col-md-3">
@@ -153,11 +154,13 @@
                     <% } %>
                   </td>
                   <td>
+                    <!-- ACTIVAR/DESACTIVAR -->
                     <form
                       action="/admin/cuentas/<%= acc._id %>/update"
                       method="POST"
                       class="d-inline"
                     >
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <input type="hidden" name="active" value="<%= !acc.active %>" />
                       <button
                         class="btn btn-sm <%= acc.active ? 'btn-secondary' : 'btn-success' %>"
@@ -165,11 +168,14 @@
                         <%= acc.active ? 'Desactivar' : 'Activar' %>
                       </button>
                     </form>
+
+                    <!-- ELIMINAR -->
                     <form
                       action="/admin/cuentas/<%= acc._id %>/delete"
                       method="POST"
                       class="d-inline"
                     >
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <button
                         class="btn btn-sm btn-danger"
                         onclick="return confirm('¿Eliminar esta cuenta?')"
