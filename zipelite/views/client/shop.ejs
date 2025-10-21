@@ -1,4 +1,6 @@
 <!-- ✅ views/client/shop.ejs -->
+<% layout('layout-client') %>
+
 <%- include('../partials/errors') %>
 <%- include('../partials/success') %>
 
@@ -10,7 +12,6 @@
       No hay plataformas disponibles por el momento.
     </div>
   <% } else { %>
-
     <div class="row g-4">
       <% platforms.forEach(p => { %>
         <div class="col-md-4">
@@ -61,6 +62,5 @@
         </div>
       <% }) %>
     </div>
-
   <% } %>
 </div>
