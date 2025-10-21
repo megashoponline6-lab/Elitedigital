@@ -16,6 +16,10 @@ import fs from 'fs';
 import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 
+// 🧩 MongoDB + Rutas de gestión de cuentas
+import mongoose from 'mongoose';
+import adminAccountsRoutes from './routes/adminAccounts.js';
+
 dotenv.config();
 
 const app = express();
@@ -44,6 +48,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
+
+// 🧩 Conexión a MongoDB Atlas
+if (process.env.MONGODB_URI) {
+  try {
+    await mongoose.connect(process.env.MONGODB_URI);
+    console.log('✅ Conectado a MongoDB Atlas');
+  } catch (err) {
+    console.error('❌ Error al conectar MongoDB Atlas:', err);
+  }
+} else {
+  console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
+}
 
 // 📝 Sesiones
 app.use(
@@ -241,13 +257,15 @@ app.post('/login',
     if (!ok)
       return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
     
-    // ✅ Guardar sesión y última conexión
     req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
     await run(`UPDATE users SET last_login = datetime('now') WHERE id=?;`, [u.id]);
 
     res.redirect('/panel?ok=Bienvenido');
   }
 );
+
+// ⚙️ Nueva sección: Gestión de Cuentas (MongoDB)
+app.use(adminAccountsRoutes);
 
 // 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
