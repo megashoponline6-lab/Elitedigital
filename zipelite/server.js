@@ -1,4 +1,4 @@
-// ✅ server.js (versión final con manejo de plataformas de streaming)
+// ✅ server.js (versión final con manejo de plataformas + última conexión y registro permanente)
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -73,14 +73,76 @@ app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
 // 🧱 Tablas
-await run(`CREATE TABLE IF NOT EXISTS admins (id INTEGER PRIMARY KEY AUTOINCREMENT, usuario TEXT UNIQUE, passhash TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, apellido TEXT, pais TEXT, telefono TEXT, correo TEXT UNIQUE, passhash TEXT, saldo INTEGER DEFAULT 0, activo INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS products (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT, etiqueta TEXT, precio INTEGER, logo TEXT, activo INTEGER DEFAULT 1, disponible INTEGER DEFAULT 1, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS subscriptions (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, product_id INTEGER, vence_en TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS topups (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, monto INTEGER, nota TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS manual_sales (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, descripcion TEXT, monto INTEGER, fecha TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS tickets (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, estado TEXT DEFAULT 'abierto', created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
-await run(`CREATE TABLE IF NOT EXISTS ticket_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, ticket_id INTEGER, autor TEXT, mensaje TEXT, created_at TEXT DEFAULT CURRENT_TIMESTAMP);`);
+await run(`CREATE TABLE IF NOT EXISTS admins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  usuario TEXT UNIQUE,
+  passhash TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT,
+  apellido TEXT,
+  pais TEXT,
+  telefono TEXT,
+  correo TEXT UNIQUE,
+  passhash TEXT,
+  saldo INTEGER DEFAULT 0,
+  activo INTEGER DEFAULT 1,
+  last_login TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS products (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nombre TEXT,
+  etiqueta TEXT,
+  precio INTEGER,
+  logo TEXT,
+  activo INTEGER DEFAULT 1,
+  disponible INTEGER DEFAULT 1,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  product_id INTEGER,
+  vence_en TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS topups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  monto INTEGER,
+  nota TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS manual_sales (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  descripcion TEXT,
+  monto INTEGER,
+  fecha TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS tickets (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  estado TEXT DEFAULT 'abierto',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
+
+await run(`CREATE TABLE IF NOT EXISTS ticket_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER,
+  autor TEXT,
+  mensaje TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);`);
 
 // 👑 Admin por defecto
 const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
@@ -92,7 +154,7 @@ if (adminCount.c === 0) {
   console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
 }
 
-// 🌱 Seed productos
+// 🌱 Productos iniciales
 const c = await get(`SELECT COUNT(*) as c FROM products;`);
 if (c.c === 0) {
   const seedPath = path.join(process.cwd(), 'seed', 'products.json');
@@ -112,7 +174,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Página principal
+// 🏠 Home
 app.get('/', async (req, res, next) => {
   try {
     const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
@@ -178,7 +240,11 @@ app.post('/login',
     const ok = await bcrypt.compare(req.body.password, u.passhash);
     if (!ok)
       return res.status(400).render('login', { csrfToken: req.csrfToken(), errores: [{ msg: 'Credenciales inválidas' }] });
+    
+    // ✅ Guardar sesión y última conexión
     req.session.user = { id: u.id, nombre: u.nombre, correo: u.correo };
+    await run(`UPDATE users SET last_login = datetime('now') WHERE id=?;`, [u.id]);
+
     res.redirect('/panel?ok=Bienvenido');
   }
 );
@@ -228,7 +294,7 @@ app.get('/admin/salir', (req, res) => { delete req.session.admin; res.redirect('
 // 📊 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
   try {
-    const usuarios = await all(`SELECT id,nombre,apellido,correo,saldo,activo FROM users ORDER BY id DESC LIMIT 15;`);
+    const usuarios = await all(`SELECT id, nombre, apellido, correo, saldo, activo, last_login FROM users ORDER BY id DESC;`);
     const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
     const totSaldo = await get(`SELECT SUM(saldo) as s FROM users;`);
     const totManualMes = await get(`SELECT SUM(monto) as s FROM manual_sales WHERE strftime('%Y-%m', fecha)=strftime('%Y-%m','now');`);
@@ -246,9 +312,9 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
     const { correo, monto, nota } = req.body;
     const user = await get(`SELECT id, saldo FROM users WHERE lower(correo)=?;`, [correo.toLowerCase()]);
     if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
-    const nuevoSaldo = user.saldo + parseInt(monto);
+    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
     await run(`UPDATE users SET saldo=? WHERE id=?;`, [nuevoSaldo, user.id]);
-    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user.id, monto, nota || 'Recarga manual']);
+    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user.id, parseInt(monto), nota || 'Recarga manual']);
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
@@ -256,7 +322,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 🎬 Añadir nueva plataforma
+// 🎬 Añadir plataforma
 app.post('/admin/plataforma', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   try {
     const { nombre } = req.body;
@@ -270,7 +336,7 @@ app.post('/admin/plataforma', requireAdmin, upload.single('logoimg'), csrfProtec
   }
 });
 
-// 🖼️ Cambiar logo de plataforma
+// 🖼️ Cambiar logo
 app.post('/admin/plataforma/:id/logo', requireAdmin, upload.single('logoimg'), csrfProtection, async (req, res) => {
   try {
     if (!req.file) return res.redirect('/admin/panel?error=Sin archivo');
