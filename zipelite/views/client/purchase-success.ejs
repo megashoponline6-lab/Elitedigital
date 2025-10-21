@@ -1,0 +1,59 @@
+<!-- ✅ views/client/purchase-success.ejs -->
+<%- include('../partials/errors') %>
+<%- include('../partials/success') %>
+
+<div class="container mt-5 text-light">
+  <div class="text-center mb-4">
+    <h2>✅ Compra completada</h2>
+    <p>Gracias por tu compra. Aquí tienes tus datos de acceso:</p>
+  </div>
+
+  <div class="card bg-dark border-secondary shadow-lg">
+    <div class="card-header border-secondary text-center">
+      <h4 class="mb-0"><%= platform.name || platform.nombre %></h4>
+    </div>
+    <div class="card-body">
+      <table class="table table-dark table-striped table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th>Correo</th>
+            <th>Contraseña</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% accounts.forEach(a => { %>
+            <tr>
+              <td><%= a.email %></td>
+              <td>
+                <span class="password-mask" data-pass="<%= a.password %>">•••••••</span>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-outline-secondary btn-show-pass"
+                  title="Mostrar contraseña"
+                >
+                  👁️
+                </button>
+              </td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="text-center mt-4">
+    <a href="/tienda" class="btn btn-warning">Volver a la Tienda</a>
+  </div>
+</div>
+
+<!-- Script para mostrar/ocultar contraseñas -->
+<script>
+  document.querySelectorAll('.btn-show-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const span = btn.previousElementSibling;
+      const hidden = span.textContent.includes('•');
+      span.textContent = hidden ? span.dataset.pass : '•••••••';
+      btn.textContent = hidden ? '🙈' : '👁️';
+    });
+  });
+</script>
