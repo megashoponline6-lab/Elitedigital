@@ -1,0 +1,103 @@
+<%- include('../partials/errors') %>
+<%- include('../partials/success') %>
+
+<div class="container mt-4 text-light">
+  <h1 class="mb-4">🎬 Gestión de Plataformas</h1>
+
+  <!-- FORMULARIO NUEVA PLATAFORMA -->
+  <div class="card bg-dark border-secondary mb-4 shadow">
+    <div class="card-header border-secondary">
+      <h5 class="mb-0">➕ Añadir nueva plataforma</h5>
+    </div>
+    <div class="card-body">
+      <form action="/admin/plataformas" method="POST" enctype="multipart/form-data">
+        <div class="row g-3 align-items-center">
+          <div class="col-md-5">
+            <label class="form-label">Nombre de la plataforma</label>
+            <input
+              type="text"
+              name="name"
+              class="form-control bg-dark text-light border-secondary"
+              placeholder="Netflix, Disney+, etc."
+              required
+            />
+          </div>
+          <div class="col-md-5">
+            <label class="form-label">Logo (opcional)</label>
+            <input
+              type="file"
+              name="logoimg"
+              accept="image/*"
+              class="form-control bg-dark text-light border-secondary"
+            />
+          </div>
+          <div class="col-md-2">
+            <button class="btn btn-danger mt-4 w-100">Guardar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TABLA DE PLATAFORMAS -->
+  <div class="card bg-dark border-secondary shadow">
+    <div class="card-header border-secondary">
+      <h5 class="mb-0">📋 Plataformas registradas</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-dark table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Logo</th>
+              <th>Nombre</th>
+              <th>Disponible</th>
+              <th>Actualizar logo</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (platforms.length === 0) { %>
+              <tr>
+                <td colspan="5" class="text-center text-secondary py-4">
+                  No hay plataformas registradas
+                </td>
+              </tr>
+            <% } else { %>
+              <% platforms.forEach(p => { %>
+                <tr>
+                  <td>
+                    <% if (p.logoUrl) { %>
+                      <img src="<%= p.logoUrl %>" style="height:40px; border-radius:8px;" />
+                    <% } else { %>
+                      <span class="text-secondary">Sin logo</span>
+                    <% } %>
+                  </td>
+                  <td><strong><%= p.name %></strong></td>
+                  <td>
+                    <% if (p.available) { %>
+                      <span class="badge bg-success">Sí</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">No</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <form action="/admin/plataformas/<%= p._id %>/update" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                      <input type="file" name="logoimg" accept="image/*" class="form-control form-control-sm bg-dark text-light" required />
+                      <button class="btn btn-sm btn-outline-warning">Actualizar</button>
+                    </form>
+                  </td>
+                  <td>
+                    <form action="/admin/plataformas/<%= p._id %>/delete" method="POST" onsubmit="return confirm('¿Eliminar esta plataforma?')">
+                      <button class="btn btn-sm btn-outline-danger">Eliminar</button>
+                    </form>
+                  </td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
