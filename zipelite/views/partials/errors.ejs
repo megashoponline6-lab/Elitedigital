@@ -1,5 +1,9 @@
-<% if (errores && errores.length) { %>
-<div class="alert alert-danger"><ul class="mb-0">
-  <% errores.forEach(e => { %><li><%= e.msg %></li><% }) %>
-</ul></div>
+<% if (typeof errores !== 'undefined' && errores && errores.length) { %>
+  <div class="alert alert-danger">
+    <ul class="mb-0">
+      <% errores.forEach(e => { %>
+        <li><%= e.msg %></li>
+      <% }) %>
+    </ul>
+  </div>
 <% } %>
