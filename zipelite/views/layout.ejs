@@ -3,24 +3,37 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
   <title>
     Eliteflix<%= (typeof title !== 'undefined' && title) ? ' - ' + title : '' %>
   </title>
+
+  <!-- ✅ Bootstrap principal -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- ✅ Bootstrap Icons (para los íconos de success/error, etc.) -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- ✅ Estilos personalizados -->
   <link href="/public/css/style.css" rel="stylesheet">
 </head>
+
 <body class="bg-dark text-light">
 
+  <!-- 🔻 NAVBAR -->
   <nav class="navbar navbar-expand-lg navbar-dark bg-black border-bottom border-danger">
     <div class="container">
       <a class="navbar-brand fw-bold text-danger" href="/">Éliteflix</a>
+
       <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav">
         <span class="navbar-toggler-icon"></span>
       </button>
+
       <div class="collapse navbar-collapse" id="nav">
         <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="/catalogo">Catálogo</a></li>
         </ul>
+
         <ul class="navbar-nav">
           <% if (sess && sess.user) { %>
             <li class="nav-item"><a class="nav-link" href="/panel">Mi Panel</a></li>
@@ -35,15 +48,17 @@
     </div>
   </nav>
 
+  <!-- 🔸 CONTENIDO PRINCIPAL -->
   <main class="container my-4">
     <%- body %>
   </main>
 
+  <!-- 🔻 FOOTER -->
   <footer class="text-center text-secondary py-4 small">
     © <%= new Date().getFullYear() %> Éliteflix
   </footer>
 
-  <!-- Bootstrap JS -->
+  <!-- ✅ Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
   <!-- 🔔 Sistema de alertas visuales -->
@@ -55,18 +70,22 @@
 
       if (ok) {
         document.body.insertAdjacentHTML('afterbegin', `
-          <div class="alert alert-success alert-dismissible fade show m-3 shadow" role="alert" style="z-index:9999; position:fixed; top:1rem; right:1rem; min-width:250px;">
-            ✅ ${ok}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <div class="alert alert-success alert-dismissible fade show m-3 shadow border-0 rounded-4 d-flex align-items-center"
+               role="alert" style="z-index:9999; position:fixed; top:1rem; right:1rem; min-width:280px;">
+            <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+            <div class="flex-grow-1">${ok}</div>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
         `);
       }
 
       if (error) {
         document.body.insertAdjacentHTML('afterbegin', `
-          <div class="alert alert-danger alert-dismissible fade show m-3 shadow" role="alert" style="z-index:9999; position:fixed; top:1rem; right:1rem; min-width:250px;">
-            ⚠️ ${error}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          <div class="alert alert-danger alert-dismissible fade show m-3 shadow border-0 rounded-4 d-flex align-items-center"
+               role="alert" style="z-index:9999; position:fixed; top:1rem; right:1rem; min-width:280px;">
+            <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+            <div class="flex-grow-1">${error}</div>
+            <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
           </div>
         `);
       }
