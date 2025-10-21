@@ -1,25 +1,26 @@
-// routes/adminAccounts.js
-const express = require('express');
-const router = express.Router();
-const adminAccounts = require('../controllers/adminAccountsController');
+// ✅ routes/adminAccounts.js (versión compatible con ES Modules)
+import express from 'express';
+import { view, create, update, remove } from '../controllers/adminAccountsController.js';
 
-// Middleware temporal de autenticación (puedes reemplazarlo luego)
+const router = express.Router();
+
+// 🧩 Middleware temporal de autenticación (solo para desarrollo)
 const ensureAdmin = (req, res, next) => {
-  // Aquí puedes validar sesión si tienes login de admin
-  // Por ahora dejamos que todos los accedan para desarrollo
+  // Más adelante puedes conectar esto con tu sesión de admin real
   next();
 };
 
-// Mostrar la tabla de gestión de cuentas
-router.get('/admin/cuentas', ensureAdmin, adminAccounts.view);
+// 📋 Mostrar la tabla de gestión de cuentas
+router.get('/admin/cuentas', ensureAdmin, view);
 
-// Crear nueva cuenta
-router.post('/admin/cuentas', ensureAdmin, adminAccounts.create);
+// ➕ Crear nueva cuenta
+router.post('/admin/cuentas', ensureAdmin, create);
 
-// Actualizar cuenta existente
-router.post('/admin/cuentas/:id/update', ensureAdmin, adminAccounts.update);
+// 🔁 Actualizar cuenta existente
+router.post('/admin/cuentas/:id/update', ensureAdmin, update);
 
-// Eliminar cuenta
-router.post('/admin/cuentas/:id/delete', ensureAdmin, adminAccounts.remove);
+// ❌ Eliminar cuenta
+router.post('/admin/cuentas/:id/delete', ensureAdmin, remove);
 
-module.exports = router;
+// ✅ Exportación por defecto (necesaria para Render)
+export default router;
