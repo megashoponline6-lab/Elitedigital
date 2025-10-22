@@ -79,7 +79,7 @@ app.use(
 
 const csrfProtection = csrf({ cookie: true });
 
-// 🔐 Middleware de autenticación
+// 🔐 Middlewares de autenticación
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
@@ -357,10 +357,19 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
       usuarios,
       productos,
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
+      errores: [], // ✅ Evita ReferenceError
+      ok: req.query.ok || null,
+      error: req.query.error || null
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
-    res.redirect('/admin?error=Error al cargar el panel');
+    res.status(500).render('admin/panel', {
+      csrfToken: req.csrfToken ? req.csrfToken() : '',
+      usuarios: [],
+      productos: [],
+      stats: {},
+      errores: [{ msg: 'Error interno al cargar el panel.' }]
+    });
   }
 });
 
@@ -388,7 +397,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 🚪 Logout unificado
+// 🚪 Logout unificado (admin + usuario)
 app.get(['/logout', '/admin/salir'], (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login?ok=Sesión cerrada correctamente');
