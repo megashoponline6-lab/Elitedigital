@@ -1,20 +1,17 @@
-// ✅ controllers/adminPlatformsController.js — versión final optimizada para Render (ESM)
+// ✅ controllers/adminPlatformsController.js — versión final Mongo pura + CSRF
 import Platform from '../models/Platform.js';
+import Account from '../models/Account.js';
 import fs from 'fs';
 import path from 'path';
 
-/**
- * 📋 Mostrar todas las plataformas
- */
 export const view = async (req, res) => {
   try {
     const platforms = await Platform.find({}).sort({ createdAt: -1 }).lean();
-
     res.render('admin/admin-platforms', {
       title: 'Gestión de Plataformas',
       platforms,
-      csrfToken: req.csrfToken ? req.csrfToken() : '', // ✅ protege si el middleware no está activo
-      errores: [] // ✅ evita ReferenceError en el include('../partials/errors')
+      csrfToken: req.csrfToken ? req.csrfToken() : '',
+      errores: []
     });
   } catch (err) {
     console.error('❌ Error al cargar plataformas:', err);
@@ -27,9 +24,6 @@ export const view = async (req, res) => {
   }
 };
 
-/**
- * ➕ Crear nueva plataforma
- */
 export const create = async (req, res) => {
   try {
     const { name } = req.body;
@@ -43,12 +37,7 @@ export const create = async (req, res) => {
       logoUrl = '/public/uploads/' + fileName;
     }
 
-    await Platform.create({
-      name,
-      logoUrl,
-      available: true
-    });
-
+    await Platform.create({ name, logoUrl, available: true });
     console.log(`✅ Plataforma creada: ${name}`);
     res.redirect('/admin/plataformas?ok=Plataforma creada correctamente');
   } catch (err) {
@@ -57,34 +46,32 @@ export const create = async (req, res) => {
   }
 };
 
-/**
- * 🔁 Actualizar logo o estado
- */
 export const update = async (req, res) => {
   try {
     const platform = await Platform.findById(req.params.id);
     if (!platform) return res.redirect('/admin/plataformas?error=No encontrada');
 
     if (req.file) {
-      // Subir nuevo logo y reemplazar
       const fileName = Date.now() + '-' + req.file.originalname;
       const dest = path.join('public', 'uploads', fileName);
       fs.renameSync(req.file.path, dest);
       platform.logoUrl = '/public/uploads/' + fileName;
     }
 
+    // (Si en el futuro agregas toggle de available)
+    if (typeof req.body.available !== 'undefined') {
+      platform.available = req.body.available === 'true';
+    }
+
     await platform.save();
     console.log(`🟡 Plataforma actualizada: ${platform.name}`);
-    res.redirect('/admin/plataformas?ok=Logo actualizado');
+    res.redirect('/admin/plataformas?ok=Plataforma actualizada');
   } catch (err) {
     console.error('❌ Error al actualizar plataforma:', err);
     res.redirect('/admin/plataformas?error=Error al actualizar');
   }
 };
 
-/**
- * ❌ Eliminar plataforma
- */
 export const remove = async (req, res) => {
   try {
     const platform = await Platform.findById(req.params.id);
@@ -96,9 +83,12 @@ export const remove = async (req, res) => {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
     }
 
-    await Platform.deleteOne({ _id: req.params.id });
-    console.log(`🗑️ Plataforma eliminada: ${platform.name}`);
-    res.redirect('/admin/plataformas?ok=Plataforma eliminada correctamente');
+    // 🔥 Borrado en cascada de cuentas asociadas
+    await Account.deleteMany({ platform: platform._id });
+
+    await Platform.deleteOne({ _id: platform._id });
+    console.log(`🗑️ Plataforma eliminada: ${platform.name} (y sus cuentas asociadas)`);
+    res.redirect('/admin/plataformas?ok=Plataforma eliminada');
   } catch (err) {
     console.error('❌ Error al eliminar plataforma:', err);
     res.redirect('/admin/plataformas?error=Error al eliminar');
