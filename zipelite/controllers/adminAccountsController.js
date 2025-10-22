@@ -1,18 +1,13 @@
-// ✅ controllers/adminAccountsController.js — Versión final optimizada para Render (ESM)
+// ✅ controllers/adminAccountsController.js — Mongo puro
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 
-/**
- * 📄 Vista principal de gestión de cuentas
- */
 export const view = async (req, res) => {
   try {
     const platforms = await Platform.find({}).sort({ name: 1 }).lean();
 
-    // Filtros
     const { platform: platformId, q } = req.query;
     const filter = {};
-
     if (platformId && platformId !== 'all') filter.platform = platformId;
     if (q && q.trim()) {
       const regex = new RegExp(q.trim(), 'i');
@@ -30,7 +25,7 @@ export const view = async (req, res) => {
       accounts,
       filters: { platformId: platformId || 'all', q: q || '' },
       csrfToken: req.csrfToken(),
-      errores: [] // ✅ evita ReferenceError en el partial
+      errores: []
     });
   } catch (err) {
     console.error('❌ Error al mostrar gestión de cuentas:', err);
@@ -45,13 +40,9 @@ export const view = async (req, res) => {
   }
 };
 
-/**
- * ➕ Crear nueva cuenta
- */
 export const create = async (req, res) => {
   try {
     const { platform, email, password, slots } = req.body;
-
     if (!platform || !email || !password || !slots) {
       return res.redirect('/admin/cuentas?error=Faltan campos obligatorios');
     }
@@ -72,9 +63,6 @@ export const create = async (req, res) => {
   }
 };
 
-/**
- * ✏️ Actualizar cuenta existente
- */
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
@@ -87,9 +75,7 @@ export const update = async (req, res) => {
       active: active === 'true' || active === true
     });
 
-    if (!updated) {
-      return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
-    }
+    if (!updated) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
 
     console.log(`🟡 Cuenta actualizada: ${id}`);
     res.redirect('/admin/cuentas?ok=Cuenta actualizada');
@@ -99,17 +85,11 @@ export const update = async (req, res) => {
   }
 };
 
-/**
- * 🗑️ Eliminar cuenta
- */
 export const remove = async (req, res) => {
   try {
     const { id } = req.params;
     const deleted = await Account.findByIdAndDelete(id);
-
-    if (!deleted) {
-      return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
-    }
+    if (!deleted) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
 
     console.log(`🗑️ Cuenta eliminada: ${id}`);
     res.redirect('/admin/cuentas?ok=Cuenta eliminada correctamente');
@@ -119,9 +99,6 @@ export const remove = async (req, res) => {
   }
 };
 
-/**
- * 🎲 Seleccionar cuentas aleatorias sin repetir
- */
 export const pickRandomAccounts = async (platformId, count = 1) => {
   try {
     const pool = await Account.find({
@@ -132,7 +109,6 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
 
     if (!pool.length) return [];
 
-    // Mezclar aleatoriamente (Fisher–Yates)
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -140,20 +116,15 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
 
     const selected = pool.slice(0, Math.min(count, pool.length));
 
-    // Reducir slots
     await Promise.all(
       selected.map(acc =>
-        Account.updateOne(
-          { _id: acc._id, slots: { $gt: 0 } },
-          { $inc: { slots: -1 } }
-        )
+        Account.updateOne({ _id: acc._id, slots: { $gt: 0 } }, { $inc: { slots: -1 } })
       )
     );
 
     console.log(`🎟️ ${selected.length} cuenta(s) asignada(s) aleatoriamente`);
     return selected;
-  } catch (err) {
-    console.error('❌ Error al seleccionar cuentas aleatorias:', err);
+  } catch {
     return [];
   }
 };
