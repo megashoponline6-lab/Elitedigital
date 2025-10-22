@@ -1,4 +1,4 @@
-// ✅ server.js — versión final con MongoDB Atlas + SQLite + Gestión de Cuentas y Plataformas + Sistema de Ventas + Rutas /admin y /logout
+// ✅ server.js — versión final con MongoDB Atlas + SQLite + CSRF + Gestión de Cuentas, Plataformas y Ventas
 import express from 'express';
 import session from 'express-session';
 import SQLiteStoreFactory from 'connect-sqlite3';
@@ -15,15 +15,15 @@ import dayjs from 'dayjs';
 import fs from 'fs';
 import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
-
-// 🧩 MongoDB + rutas y modelos
 import mongoose from 'mongoose';
-import adminAccountsRoutes from './routes/adminAccounts.js';
-import adminPlatformsRoutes from './routes/adminPlatforms.js';
-import salesRoutes from './routes/sales.js';
+
+// 🧩 Modelos y rutas
 import User from './models/User.js';
 import Account from './models/Account.js';
 import Platform from './models/Platform.js';
+import adminAccountsRoutes from './routes/adminAccounts.js';
+import adminPlatformsRoutes from './routes/adminPlatforms.js';
+import salesRoutes from './routes/sales.js';
 
 dotenv.config();
 
@@ -40,13 +40,13 @@ for (const d of [DATA_DIR, UPLOADS_DIR]) {
 const SQLiteStore = SQLiteStoreFactory(session);
 const upload = multer({ dest: UPLOADS_DIR });
 
-// 🧠 Vistas y layouts
+// ⚙️ Configuración de vistas y layouts
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
-// 🛡 Seguridad, logs y middlewares
+// 🛡 Seguridad y middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
@@ -60,17 +60,17 @@ if (process.env.MONGODB_URI) {
     await mongoose.connect(process.env.MONGODB_URI);
     console.log('✅ Conectado a MongoDB Atlas');
   } catch (err) {
-    console.error('❌ Error al conectar MongoDB Atlas:', err);
+    console.error('❌ Error al conectar con MongoDB Atlas:', err);
   }
 } else {
   console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
-// 🧠 Sesiones
+// 💾 Sesiones
 app.use(
   session({
     store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }),
-    secret: process.env.SESSION_SECRET || 'inseguro',
+    secret: process.env.SESSION_SECRET || 'clave-insegura',
     resave: false,
     saveUninitialized: false,
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 },
@@ -79,11 +79,12 @@ app.use(
 
 const csrfProtection = csrf({ cookie: true });
 
-// 🔒 Middlewares de acceso
+// 🔐 Middleware de autenticación
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
 }
+
 function requireAdmin(req, res, next) {
   if (req.session.user) return res.redirect('/panel?error=No tienes permiso para entrar aquí');
   if (!req.session.admin) return res.redirect('/admin');
@@ -157,11 +158,11 @@ if (adminCount.c === 0) {
   const defaultUser = 'ml3838761@gmail.com';
   const defaultPass = '07141512';
   const passhash = await bcrypt.hash(defaultPass, 12);
-  await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?);`, [defaultUser, passhash]);
+  await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?)`, [defaultUser, passhash]);
   console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
 }
 
-// 🌐 Mensajes globales
+// 🌐 Variables globales
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -169,10 +170,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Home y catálogo
+// 🏠 Página principal y catálogo
 app.get('/', async (req, res, next) => {
   try {
-    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
+    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre`);
     res.render('home', { productos, etiquetas: [], filtro: '' });
   } catch (e) {
     next(e);
@@ -181,14 +182,14 @@ app.get('/', async (req, res, next) => {
 
 app.get('/catalogo', async (req, res, next) => {
   try {
-    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre;`);
+    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre`);
     res.render('catalogo', { productos, etiquetas: [], filtro: '' });
   } catch (e) {
     next(e);
   }
 });
 
-// 🧾 Registro de usuarios (MongoDB)
+// 👤 Registro usuarios
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
@@ -211,7 +212,10 @@ app.post(
   async (req, res) => {
     const errores = validationResult(req);
     if (!errores.isEmpty())
-      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+      return res.status(400).render('registro', {
+        csrfToken: req.csrfToken(),
+        errores: errores.array(),
+      });
 
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
@@ -225,14 +229,7 @@ app.post(
         });
 
       const passhash = await bcrypt.hash(password, 10);
-      await User.create({
-        nombre,
-        apellido,
-        pais,
-        telefono: telefono || '',
-        correo: correo.toLowerCase(),
-        passhash,
-      });
+      await User.create({ nombre, apellido, pais, telefono, correo, passhash });
 
       res.redirect('/login?ok=Registro completado');
     } catch (err) {
@@ -245,7 +242,7 @@ app.post(
   }
 );
 
-// 👤 Login clientes (MongoDB)
+// 👤 Login de usuarios (MongoDB)
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
@@ -258,37 +255,35 @@ app.post(
   body('password').notEmpty(),
   async (req, res) => {
     const correo = normalizeEmail(req.body.correo);
-
     try {
-      const u = await User.findOne({ correo: correo.toLowerCase(), activo: true }).lean();
+      const u = await User.findOne({ correo, activo: true }).lean();
       if (!u)
         return res.status(400).render('login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada' }],
+          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada.' }],
         });
 
       const ok = await bcrypt.compare(req.body.password, u.passhash);
       if (!ok)
         return res.status(400).render('login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Credenciales inválidas' }],
+          errores: [{ msg: 'Contraseña incorrecta.' }],
         });
 
       req.session.user = { id: u._id.toString(), nombre: u.nombre, correo: u.correo };
       await User.updateOne({ _id: u._id }, { last_login: new Date() });
-
       res.redirect('/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login MongoDB:', err);
       res.status(500).render('login', {
         csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor' }],
+        errores: [{ msg: 'Error interno del servidor.' }],
       });
     }
   }
 );
 
-// 👑 Login administrador (SQLite)
+// 👑 Login admin (SQLite)
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
@@ -302,18 +297,18 @@ app.post(
   async (req, res) => {
     try {
       const { usuario, password } = req.body;
-      const admin = await get(`SELECT * FROM admins WHERE usuario = ?;`, [usuario]);
+      const admin = await get(`SELECT * FROM admins WHERE usuario = ?`, [usuario]);
       if (!admin)
         return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Usuario no encontrado' }],
+          errores: [{ msg: 'Usuario no encontrado.' }],
         });
 
       const ok = await bcrypt.compare(password, admin.passhash);
       if (!ok)
         return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Contraseña incorrecta' }],
+          errores: [{ msg: 'Contraseña incorrecta.' }],
         });
 
       req.session.admin = { id: admin.id, usuario: admin.usuario };
@@ -322,18 +317,18 @@ app.post(
       console.error('❌ Error en login admin:', err);
       res.status(500).render('admin/login', {
         csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor' }],
+        errores: [{ msg: 'Error interno del servidor.' }],
       });
     }
   }
 );
 
-// ⚙️ Rutas de administración MongoDB
+// ⚙️ Rutas principales del panel admin
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 app.use(salesRoutes);
 
-// 👤 Panel usuario
+// 🧭 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
@@ -344,11 +339,11 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 📊 Panel admin
-app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => {
+// 📊 Panel administrador
+app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
-    const productos = await all(`SELECT * FROM products ORDER BY id DESC;`);
+    const productos = await all(`SELECT * FROM products ORDER BY id DESC`);
     const totalAccounts = await Account.countDocuments();
     const totalPlatforms = await Platform.countDocuments();
 
@@ -361,11 +356,11 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res, next) => 
       csrfToken: req.csrfToken(),
       usuarios,
       productos,
-      stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms }
+      stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
-    next(err);
+    res.redirect('/admin?error=Error al cargar el panel');
   }
 });
 
@@ -379,7 +374,12 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
     const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
     await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
 
-    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?);`, [user._id.toString(), parseInt(monto), nota || 'Recarga manual']);
+    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?)`, [
+      user._id.toString(),
+      parseInt(monto),
+      nota || 'Recarga manual',
+    ]);
+
     console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo}`);
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
@@ -388,20 +388,20 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 🚪 Logout (usuarios y administradores)
-app.get('/logout', (req, res) => {
+// 🚪 Logout unificado
+app.get(['/logout', '/admin/salir'], (req, res) => {
   req.session.destroy(() => {
     res.redirect('/login?ok=Sesión cerrada correctamente');
   });
 });
 
-// 404 y 500
+// 404 y errores internos
 app.use((req, res) => res.status(404).render('404'));
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
   console.error('❌ Error interno:', err);
   res.status(500).send('Error Interno del Servidor');
 });
 
-// 🚀 Inicio
+// 🚀 Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
