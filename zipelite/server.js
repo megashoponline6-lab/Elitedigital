@@ -1,7 +1,6 @@
-// ✅ server.js — versión final con MongoDB Atlas + SQLite + CSRF + Gestión de Cuentas, Plataformas y Ventas
+// ✅ server.js — MongoDB only + CSRF + Admin en Mongo + Catálogo desde Platform
 import express from 'express';
 import session from 'express-session';
-import SQLiteStoreFactory from 'connect-sqlite3';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
@@ -13,40 +12,35 @@ import bcrypt from 'bcrypt';
 import multer from 'multer';
 import dayjs from 'dayjs';
 import fs from 'fs';
-import { run, all, get } from './db.js';
 import expressLayouts from 'express-ejs-layouts';
 import mongoose from 'mongoose';
 
-// 🧩 Modelos y rutas
 import User from './models/User.js';
+import Admin from './models/Admin.js';
 import Account from './models/Account.js';
 import Platform from './models/Platform.js';
+
 import adminAccountsRoutes from './routes/adminAccounts.js';
 import adminPlatformsRoutes from './routes/adminPlatforms.js';
-import salesRoutes from './routes/sales.js';
+// (opcional) import salesRoutes from './routes/sales.js';
 
 dotenv.config();
 
 const app = express();
 app.set('trust proxy', 1);
 
-// 📁 Crear carpetas necesarias
-const DATA_DIR = path.join(process.cwd(), 'data');
+// 📁 Carpetas necesarias
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
-for (const d of [DATA_DIR, UPLOADS_DIR]) {
-  if (!fs.existsSync(d)) fs.mkdirSync(d, { recursive: true });
-}
-
-const SQLiteStore = SQLiteStoreFactory(session);
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const upload = multer({ dest: UPLOADS_DIR });
 
-// ⚙️ Configuración de vistas y layouts
+// Vistas y layout
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
-// 🛡 Seguridad y middlewares
+// Seguridad y middlewares
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
@@ -54,7 +48,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🧩 Conexión a MongoDB Atlas
+// MongoDB
 if (process.env.MONGODB_URI) {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -66,25 +60,23 @@ if (process.env.MONGODB_URI) {
   console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
-// 💾 Sesiones
+// Sesión (MemoryStore para simplicidad)
 app.use(
   session({
-    store: new SQLiteStore({ db: 'sessions.sqlite', dir: DATA_DIR }),
     secret: process.env.SESSION_SECRET || 'clave-insegura',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 },
+    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 }
   })
 );
 
 const csrfProtection = csrf({ cookie: true });
 
-// 🔐 Middlewares de autenticación
+// Auth middlewares
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
 }
-
 function requireAdmin(req, res, next) {
   if (req.session.user) return res.redirect('/panel?error=No tienes permiso para entrar aquí');
   if (!req.session.admin) return res.redirect('/admin');
@@ -94,75 +86,15 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧱 Tablas SQLite (admins, productos, etc.)
-await run(`CREATE TABLE IF NOT EXISTS admins (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  usuario TEXT UNIQUE,
-  passhash TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS products (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  nombre TEXT,
-  etiqueta TEXT,
-  precio INTEGER,
-  logo TEXT,
-  activo INTEGER DEFAULT 1,
-  disponible INTEGER DEFAULT 1,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS subscriptions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  product_id INTEGER,
-  vence_en TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS topups (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  monto INTEGER,
-  nota TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS manual_sales (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  descripcion TEXT,
-  monto INTEGER,
-  fecha TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS tickets (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  user_id INTEGER,
-  estado TEXT DEFAULT 'abierto',
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-await run(`CREATE TABLE IF NOT EXISTS ticket_messages (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  ticket_id INTEGER,
-  autor TEXT,
-  mensaje TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);`);
-
-// 👑 Admin por defecto
-const adminCount = await get(`SELECT COUNT(*) as c FROM admins;`);
-if (adminCount.c === 0) {
-  const defaultUser = 'ml3838761@gmail.com';
-  const defaultPass = '07141512';
-  const passhash = await bcrypt.hash(defaultPass, 12);
-  await run(`INSERT INTO admins (usuario, passhash) VALUES (?,?)`, [defaultUser, passhash]);
-  console.log(`✅ Admin por defecto creado: ${defaultUser} / ${defaultPass}`);
+// Admin por defecto en Mongo
+const adminExists = await Admin.findOne({ usuario: 'ml3838761@gmail.com' }).lean();
+if (!adminExists) {
+  const passhash = await bcrypt.hash('07141512', 12);
+  await Admin.create({ usuario: 'ml3838761@gmail.com', passhash });
+  console.log('✅ Admin por defecto creado (Mongo): ml3838761@gmail.com / 07141512');
 }
 
-// 🌐 Variables globales
+// Vars globales para layout
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -170,26 +102,38 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Página principal y catálogo
+// Home y catálogo — ahora desde Platform (Mongo) mapeado a "productos" para no tocar vistas
 app.get('/', async (req, res, next) => {
   try {
-    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre`);
+    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
+    const productos = platforms.map(p => ({
+      nombre: p.name,
+      etiqueta: 'Streaming',
+      precio: 0,
+      logo: p.logoUrl,
+      activo: p.available ? 1 : 0,
+      disponible: p.available ? 1 : 0
+    }));
     res.render('home', { productos, etiquetas: [], filtro: '' });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
 app.get('/catalogo', async (req, res, next) => {
   try {
-    const productos = await all(`SELECT * FROM products WHERE activo=1 ORDER BY nombre`);
+    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
+    const productos = platforms.map(p => ({
+      nombre: p.name,
+      etiqueta: 'Streaming',
+      precio: 0,
+      logo: p.logoUrl,
+      activo: p.available ? 1 : 0,
+      disponible: p.available ? 1 : 0
+    }));
     res.render('catalogo', { productos, etiquetas: [], filtro: '' });
-  } catch (e) {
-    next(e);
-  }
+  } catch (e) { next(e); }
 });
 
-// 👤 Registro usuarios
+// Registro usuarios (Mongo)
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
@@ -211,38 +155,36 @@ app.post(
   body('password').isLength({ min: 6 }),
   async (req, res) => {
     const errores = validationResult(req);
-    if (!errores.isEmpty())
-      return res.status(400).render('registro', {
-        csrfToken: req.csrfToken(),
-        errores: errores.array(),
-      });
+    if (!errores.isEmpty()) {
+      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+    }
 
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
 
     try {
       const existe = await User.findOne({ correo: correo.toLowerCase() });
-      if (existe)
+      if (existe) {
         return res.status(400).render('registro', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Ese correo ya está registrado.' }],
+          errores: [{ msg: 'Ese correo ya está registrado.' }]
         });
+      }
 
       const passhash = await bcrypt.hash(password, 10);
-      await User.create({ nombre, apellido, pais, telefono, correo, passhash });
-
+      await User.create({ nombre, apellido, pais, telefono: telefono || '', correo: correo.toLowerCase(), passhash });
       res.redirect('/login?ok=Registro completado');
     } catch (err) {
       console.error('❌ Error en registro MongoDB:', err);
       res.status(500).render('registro', {
         csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor.' }],
+        errores: [{ msg: 'Error interno del servidor.' }]
       });
     }
   }
 );
 
-// 👤 Login de usuarios (MongoDB)
+// Login usuarios (Mongo)
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
@@ -256,19 +198,20 @@ app.post(
   async (req, res) => {
     const correo = normalizeEmail(req.body.correo);
     try {
-      const u = await User.findOne({ correo, activo: true }).lean();
-      if (!u)
+      const u = await User.findOne({ correo: correo.toLowerCase(), activo: true }).lean();
+      if (!u) {
         return res.status(400).render('login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada.' }],
+          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada.' }]
         });
-
+      }
       const ok = await bcrypt.compare(req.body.password, u.passhash);
-      if (!ok)
+      if (!ok) {
         return res.status(400).render('login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Contraseña incorrecta.' }],
+          errores: [{ msg: 'Contraseña incorrecta.' }]
         });
+      }
 
       req.session.user = { id: u._id.toString(), nombre: u.nombre, correo: u.correo };
       await User.updateOne({ _id: u._id }, { last_login: new Date() });
@@ -277,13 +220,13 @@ app.post(
       console.error('❌ Error en login MongoDB:', err);
       res.status(500).render('login', {
         csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor.' }],
+        errores: [{ msg: 'Error interno del servidor.' }]
       });
     }
   }
 );
 
-// 👑 Login admin (SQLite)
+// Login admin (Mongo)
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
@@ -297,38 +240,38 @@ app.post(
   async (req, res) => {
     try {
       const { usuario, password } = req.body;
-      const admin = await get(`SELECT * FROM admins WHERE usuario = ?`, [usuario]);
-      if (!admin)
+      const admin = await Admin.findOne({ usuario }).lean();
+      if (!admin) {
         return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Usuario no encontrado.' }],
+          errores: [{ msg: 'Usuario no encontrado.' }]
         });
-
+      }
       const ok = await bcrypt.compare(password, admin.passhash);
-      if (!ok)
+      if (!ok) {
         return res.status(400).render('admin/login', {
           csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Contraseña incorrecta.' }],
+          errores: [{ msg: 'Contraseña incorrecta.' }]
         });
-
-      req.session.admin = { id: admin.id, usuario: admin.usuario };
+      }
+      req.session.admin = { id: admin._id.toString(), usuario: admin.usuario };
       res.redirect('/admin/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login admin:', err);
       res.status(500).render('admin/login', {
         csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor.' }],
+        errores: [{ msg: 'Error interno del servidor.' }]
       });
     }
   }
 );
 
-// ⚙️ Rutas principales del panel admin
+// Rutas admin (plataformas/cuentas)
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
-app.use(salesRoutes);
+// (opcional) app.use(salesRoutes);
 
-// 🧭 Panel usuario
+// Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
@@ -339,11 +282,10 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 📊 Panel administrador
+// Panel admin (stats solo Mongo)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
-    const productos = await all(`SELECT * FROM products ORDER BY id DESC`);
     const totalAccounts = await Account.countDocuments();
     const totalPlatforms = await Platform.countDocuments();
 
@@ -355,41 +297,29 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
     res.render('admin/panel', {
       csrfToken: req.csrfToken(),
       usuarios,
-      productos,
+      productos: [], // ya no usamos products SQLite
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
-      errores: [], // ✅ Evita ReferenceError
+      errores: [],
       ok: req.query.ok || null,
       error: req.query.error || null
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
-    res.status(500).render('admin/panel', {
-      csrfToken: req.csrfToken ? req.csrfToken() : '',
-      usuarios: [],
-      productos: [],
-      stats: {},
-      errores: [{ msg: 'Error interno al cargar el panel.' }]
-    });
+    res.redirect('/admin?error=Error al cargar el panel');
   }
 });
 
-// 💰 Recargar saldo
+// Recargar saldo (simple, sin registrar topup en SQLite)
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
-    const user = await User.findOne({ correo: correo.toLowerCase() });
+    const user = await User.findOne({ correo: (correo || '').toLowerCase() });
     if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
 
     const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
     await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
 
-    await run(`INSERT INTO topups (user_id, monto, nota) VALUES (?,?,?)`, [
-      user._id.toString(),
-      parseInt(monto),
-      nota || 'Recarga manual',
-    ]);
-
-    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo}`);
+    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo} (${nota || 'Recarga manual'})`);
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
@@ -397,20 +327,17 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 🚪 Logout unificado (admin + usuario)
+// Logout
 app.get(['/logout', '/admin/salir'], (req, res) => {
-  req.session.destroy(() => {
-    res.redirect('/login?ok=Sesión cerrada correctamente');
-  });
+  req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada correctamente'));
 });
 
-// 404 y errores internos
+// 404 / 500
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res) => {
   console.error('❌ Error interno:', err);
   res.status(500).send('Error Interno del Servidor');
 });
 
-// 🚀 Iniciar servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
