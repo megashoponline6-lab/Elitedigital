@@ -297,11 +297,26 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario
+// 👤 Panel usuario (con catálogo dentro)
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
-    res.render('panel', { csrfToken: req.csrfToken(), user, sub: null, dias: null, tickets: [] });
+    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
+
+    const productos = platforms.map((p) => ({
+      nombre: p.name,
+      logo: p.logoUrl,
+      etiqueta: 'Streaming',
+    }));
+
+    res.render('panel', {
+      csrfToken: req.csrfToken(),
+      user,
+      sub: null,
+      dias: null,
+      tickets: [],
+      productos, // ✅ se pasa al panel
+    });
   } catch (err) {
     console.error('❌ Error en panel usuario:', err);
     res.redirect('/login?error=Reinicia tu sesión');
