@@ -1,5 +1,5 @@
 // ✅ server.js — versión final lista para Render
-// Corrige rutas de imágenes y sirve correctamente /img/plataformas/
+// Sirve correctamente /img/plataformas/ y corrige nombres con IDs o extensiones distintas
 
 import express from 'express';
 import session from 'express-session';
@@ -48,16 +48,37 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Sirve archivos estáticos
-// - /img, /css, /js, /uploads
-// - Corrige rutas antiguas /public/uploads/ → /img/plataformas/
+// ✅ Sirve archivos estáticos (img, css, js, uploads)
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🔄 Redirección automática de rutas antiguas
+// 🔄 Redirección inteligente de /public/uploads/... → /img/plataformas/...
 app.get('/public/uploads/:file', (req, res) => {
-  // Redirige a la carpeta real donde están tus imágenes
-  res.redirect(`/img/plataformas/${req.params.file}`);
+  const fileName = req.params.file;
+  const baseDir = path.join(process.cwd(), 'public', 'img', 'plataformas');
+
+  // Intenta primero con el nombre original
+  let finalPath = path.join(baseDir, fileName);
+  if (fs.existsSync(finalPath)) {
+    return res.redirect(`/img/plataformas/${fileName}`);
+  }
+
+  // Si no existe, intenta sin el número inicial tipo 1761108813828-
+  const cleanName = fileName.replace(/^\d+-/, '');
+  finalPath = path.join(baseDir, cleanName);
+  if (fs.existsSync(finalPath)) {
+    return res.redirect(`/img/plataformas/${cleanName}`);
+  }
+
+  // Si no existe el .png, intenta también con .svg
+  const svgAlt = cleanName.replace(/\.png$/i, '.svg');
+  finalPath = path.join(baseDir, svgAlt);
+  if (fs.existsSync(finalPath)) {
+    return res.redirect(`/img/plataformas/${svgAlt}`);
+  }
+
+  console.warn(`⚠️ Imagen no encontrada: ${fileName}`);
+  res.status(404).send('Imagen no encontrada');
 });
 
 // 💾 Conexión MongoDB
