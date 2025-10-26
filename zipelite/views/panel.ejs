@@ -1,45 +1,144 @@
+<% layout = 'layout' %>
 <% var title = 'Mi Panel'; %>
-<h2 class="mb-3">Hola, <%= user.nombre %> 👋</h2>
 
-<div class="row g-3">
-  <div class="col-md-6">
-    <div class="card bg-black border-secondary rounded-4">
-      <div class="card-body">
-        <h5>Mis datos</h5>
-        <p class="mb-1"><strong>Nombre:</strong> <%= user.nombre %> <%= user.apellido %></p>
-        <p class="mb-1"><strong>País:</strong> <%= user.pais %></p>
-        <p class="mb-1"><strong>Correo:</strong> <%= user.correo %></p>
+<style>
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+
+  h2, h3, h5 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
+  }
+
+  .neon-box {
+    background: rgba(20, 20, 30, 0.75);
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3), 0 0 30px rgba(0, 150, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 1rem;
+  }
+
+  .saldo {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #00ffe1;
+    text-shadow: 0 0 10px #00fff2;
+  }
+
+  .card-glow {
+    background: rgba(25, 25, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .card-glow:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(255, 0, 100, 0.5);
+  }
+
+  .btn-neon {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    transition: box-shadow 0.3s, transform 0.2s;
+  }
+
+  .btn-neon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
+  }
+
+  .glow {
+    text-shadow: 0 0 10px #ff004c, 0 0 20px #ff004c;
+  }
+
+  .catalogo-container {
+    margin-top: 2rem;
+  }
+
+  .catalogo-container h3 {
+    text-shadow: 0 0 10px #00b7ff;
+  }
+
+  .platform-logo {
+    border-radius: 0.75rem 0.75rem 0 0;
+    height: 150px;
+    object-fit: cover;
+    transition: filter 0.3s, transform 0.3s;
+  }
+
+  .platform-logo:hover {
+    filter: drop-shadow(0 0 10px #00ffff);
+    transform: scale(1.05);
+  }
+
+  .card-body small {
+    color: #9aa;
+  }
+
+  hr {
+    border-color: rgba(255, 255, 255, 0.15);
+  }
+</style>
+
+<div class="container mt-4">
+  <h2 class="fw-bold mb-4 glow">Hola, <%= user.nombre %> ✨</h2>
+  <p class="text-secondary mb-4">Explora nuestras plataformas disponibles</p>
+
+  <div class="row g-4">
+    <!-- 🧍 Datos del usuario -->
+    <div class="col-md-4">
+      <div class="neon-box p-4 h-100">
+        <h5 class="mb-3">Mis datos</h5>
+        <p><strong>Nombre:</strong> <%= user.nombre %> <%= user.apellido %></p>
+        <p><strong>País:</strong> <%= user.pais %></p>
+        <p><strong>Correo:</strong> <%= user.correo %></p>
         <% if (user.telefono) { %>
-          <p class="mb-1"><strong>Teléfono:</strong> <%= user.telefono %></p>
+          <p><strong>Teléfono:</strong> <%= user.telefono %></p>
         <% } %>
-        <p class="display-6">Saldo: $<%= user.saldo %> MXN</p>
-      </div>
-    </div>
-  </div>
+        <p class="saldo mt-3">Saldo: $<%= user.saldo %> MXN</p>
 
-  <div class="col-md-6">
-    <div class="card bg-black border-secondary rounded-4">
-      <div class="card-body">
-        <h5>Renovación</h5>
         <% if (sub) { %>
-          <p class="mb-1"><strong>Servicio:</strong> <%= sub.prod_nombre %></p>
-          <p class="mb-1">
-            <strong>Vence:</strong> <%= dayjs(sub.vence_en).format('DD/MM/YYYY') %>
-            <% if (dias !== null) { %>
-              <span class="badge text-bg-warning ms-2"><%= dias %> días</span>
-            <% } %>
-          </p>
-          <div class="alert alert-warning mt-2">Te avisaremos cuando la fecha esté cerca.</div>
+          <hr>
+          <h6 class="text-light mb-2">Suscripción activa</h6>
+          <p><strong>Servicio:</strong> <%= sub.prod_nombre %></p>
+          <p><strong>Vence:</strong> <%= dayjs(sub.vence_en).format('DD/MM/YYYY') %></p>
         <% } else { %>
-          <p>No tienes una suscripción asignada aún.</p>
+          <hr>
+          <p class="text-secondary mb-0">No tienes una suscripción activa.</p>
         <% } %>
       </div>
     </div>
-  </div>
-</div>
 
-<hr class="my-4">
-<div class="text-center">
-  <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-outline-danger me-2">💬 Soporte Telegram</a>
-  <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-danger">📢 Canal Oficial</a>
+    <!-- 🎬 Catálogo -->
+    <div class="col-md-8">
+      <div class="catalogo-container">
+        <h3 class="mb-3">Catálogo de plataformas</h3>
+        <div class="row g-3">
+          <% if (productos && productos.length) { %>
+            <% productos.forEach(p => { %>
+              <div class="col-6 col-lg-4">
+                <div class="card card-glow h-100 text-center">
+                  <% if (p.logo) { %>
+                    <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="platform-logo">
+                  <% } %>
+                  <div class="card-body">
+                    <h6 class="text-light"><%= p.nombre %></h6>
+                    <small class="d-block mb-2 text-secondary">Explora planes disponibles</small>
+                    <a href="/catalogo" class="btn btn-neon w-100">Explorar planes</a>
+                  </div>
+                </div>
+              </div>
+            <% }) %>
+          <% } else { %>
+            <p class="text-secondary">No hay plataformas disponibles.</p>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
