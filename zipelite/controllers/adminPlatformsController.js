@@ -1,8 +1,6 @@
-// ✅ controllers/adminPlatformsController.js — versión final Mongo pura + CSRF
+// ✅ controllers/adminPlatformsController.js — versión sin multer, usa logos fijos desde /public/img/plataformas
 import Platform from '../models/Platform.js';
 import Account from '../models/Account.js';
-import fs from 'fs';
-import path from 'path';
 
 export const view = async (req, res) => {
   try {
@@ -24,21 +22,17 @@ export const view = async (req, res) => {
   }
 };
 
+// ➕ Crear plataforma sin guardar imagen
 export const create = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, logo } = req.body;
     if (!name) return res.redirect('/admin/plataformas?error=Falta el nombre');
 
-    let logoUrl = '';
-    if (req.file) {
-      const fileName = Date.now() + '-' + req.file.originalname;
-      const dest = path.join('public', 'uploads', fileName);
-      fs.renameSync(req.file.path, dest);
-      logoUrl = '/public/uploads/' + fileName;
-    }
+    // Si no se especifica logo, usar uno por defecto
+    const logoUrl = logo?.trim() || '/img/plataformas/default.png';
 
     await Platform.create({ name, logoUrl, available: true });
-    console.log(`✅ Plataforma creada: ${name}`);
+    console.log(`✅ Plataforma creada: ${name} (${logoUrl})`);
     res.redirect('/admin/plataformas?ok=Plataforma creada correctamente');
   } catch (err) {
     console.error('❌ Error al crear plataforma:', err);
@@ -46,25 +40,24 @@ export const create = async (req, res) => {
   }
 };
 
+// 🔁 Actualizar plataforma (solo texto/ruta del logo)
 export const update = async (req, res) => {
   try {
     const platform = await Platform.findById(req.params.id);
     if (!platform) return res.redirect('/admin/plataformas?error=No encontrada');
 
-    if (req.file) {
-      const fileName = Date.now() + '-' + req.file.originalname;
-      const dest = path.join('public', 'uploads', fileName);
-      fs.renameSync(req.file.path, dest);
-      platform.logoUrl = '/public/uploads/' + fileName;
+    // Si envía nuevo logo por texto, actualizarlo
+    if (req.body.logo && req.body.logo.trim() !== '') {
+      platform.logoUrl = req.body.logo.trim();
     }
 
-    // (Si en el futuro agregas toggle de available)
+    // Actualizar estado (si lo usas)
     if (typeof req.body.available !== 'undefined') {
-      platform.available = req.body.available === 'true';
+      platform.available = req.body.available === 'true' || req.body.available === 'on';
     }
 
     await platform.save();
-    console.log(`🟡 Plataforma actualizada: ${platform.name}`);
+    console.log(`🟡 Plataforma actualizada: ${platform.name} (${platform.logoUrl})`);
     res.redirect('/admin/plataformas?ok=Plataforma actualizada');
   } catch (err) {
     console.error('❌ Error al actualizar plataforma:', err);
@@ -72,18 +65,13 @@ export const update = async (req, res) => {
   }
 };
 
+// ❌ Eliminar plataforma (sin borrar archivos físicos)
 export const remove = async (req, res) => {
   try {
     const platform = await Platform.findById(req.params.id);
     if (!platform) return res.redirect('/admin/plataformas?error=No encontrada');
 
-    // Eliminar logo físico si existe
-    if (platform.logoUrl) {
-      const filePath = path.join(process.cwd(), platform.logoUrl.replace('/public/', 'public/'));
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
-
-    // 🔥 Borrado en cascada de cuentas asociadas
+    // Borrado en cascada de cuentas asociadas
     await Account.deleteMany({ platform: platform._id });
 
     await Platform.deleteOne({ _id: platform._id });
