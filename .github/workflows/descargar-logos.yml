@@ -50,16 +50,21 @@ jobs:
             ["iptv.svg"]="https://upload.wikimedia.org/wikipedia/commons/4/43/IPTV_logo_2021.svg"
             ["capcut.svg"]="https://upload.wikimedia.org/wikipedia/commons/d/d8/CapCut_logo.svg"
             ["universal.svg"]="https://upload.wikimedia.org/wikipedia/commons/8/8a/Universal_Plus_logo.svg"
-            ["flujo.svg"]="https://upload.wikimedia.org/wikipedia/commons/1/1e/Flujo_TV_logo.svg"
+            ["flujo.svg"]="https://seeklogo.com/images/F/flujo-tv-logo-A48B76A8C8-seeklogo.com.svg"
             ["plex.svg"]="https://upload.wikimedia.org/wikipedia/commons/f/f2/Plex_logo_2022.svg"
             ["openenglish.svg"]="https://upload.wikimedia.org/wikipedia/commons/2/2d/Open_English_logo.svg"
             ["dramabox.svg"]="https://upload.wikimedia.org/wikipedia/commons/9/97/Dramabox_logo.svg"
             ["viki.svg"]="https://upload.wikimedia.org/wikipedia/commons/0/0b/Viki_logo.svg"
+            ["universalplus.svg"]="https://upload.wikimedia.org/wikipedia/commons/8/8a/Universal_Plus_logo.svg"
           )
 
           for name in "${!logos[@]}"; do
             echo "⬇️  Descargando $name ..."
-            curl -L --fail "${logos[$name]}" -o "public/img/plataformas/$name" || echo "⚠️ Error descargando $name, continuando..."
+            if curl -L --fail --max-time 20 "${logos[$name]}" -o "public/img/plataformas/$name"; then
+              echo "✅ $name descargado correctamente."
+            else
+              echo "⚠️ Error descargando $name, se omitirá."
+            fi
           done
 
       - name: Commit y push de los logos
@@ -69,5 +74,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/img/plataformas
-          git commit -m "Agregados logos oficiales de plataformas" || echo "🟢 No hay cambios para commitear."
+          git commit -m "Agregados logos oficiales de plataformas (versión completa)" || echo "🟢 No hay cambios para commitear."
           git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }} HEAD:main
