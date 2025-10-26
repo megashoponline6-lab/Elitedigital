@@ -54,4 +54,4 @@ jobs:
           git config user.email "actions@github.com"
           git add public/img/plataformas
           git commit -m "Agregados logos oficiales de plataformas"
-          git push
+          git push 
