@@ -1,5 +1,5 @@
 // ✅ server.js — versión final lista para Render
-// Catálogo solo visible si el usuario ha iniciado sesión.
+// Catálogo solo visible dentro del panel del usuario (ya no existe /catalogo).
 
 import express from 'express';
 import session from 'express-session';
@@ -59,23 +59,17 @@ app.get('/public/uploads/:file', (req, res) => {
 
   // Intenta primero con el nombre original
   let finalPath = path.join(baseDir, fileName);
-  if (fs.existsSync(finalPath)) {
-    return res.redirect(`/img/plataformas/${fileName}`);
-  }
+  if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${fileName}`);
 
-  // Si no existe, intenta sin el número inicial tipo 1761108813828-
+  // Si no existe, intenta sin número inicial tipo 1761108813828-
   const cleanName = fileName.replace(/^\d+-/, '');
   finalPath = path.join(baseDir, cleanName);
-  if (fs.existsSync(finalPath)) {
-    return res.redirect(`/img/plataformas/${cleanName}`);
-  }
+  if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${cleanName}`);
 
-  // Si no existe el .png, intenta también con .svg
+  // Si no existe el .png, intenta con .svg
   const svgAlt = cleanName.replace(/\.png$/i, '.svg');
   finalPath = path.join(baseDir, svgAlt);
-  if (fs.existsSync(finalPath)) {
-    return res.redirect(`/img/plataformas/${svgAlt}`);
-  }
+  if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${svgAlt}`);
 
   console.warn(`⚠️ Imagen no encontrada: ${fileName}`);
   res.status(404).send('Imagen no encontrada');
@@ -140,24 +134,6 @@ app.use((req, res, next) => {
 // 🏠 Inicio (solo muestra hero, sin catálogo)
 app.get('/', (req, res) => {
   res.render('home', { productos: [], etiquetas: [], filtro: '' });
-});
-
-// 🔐 Catálogo (solo usuarios logueados)
-app.get('/catalogo', requireAuth, async (req, res, next) => {
-  try {
-    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
-    const productos = platforms.map((p) => ({
-      nombre: p.name,
-      etiqueta: 'Streaming',
-      precio: 0,
-      logo: p.logoUrl,
-      activo: p.available ? 1 : 0,
-      disponible: p.available ? 1 : 0,
-    }));
-    res.render('catalogo', { productos, etiquetas: [], filtro: '' });
-  } catch (e) {
-    next(e);
-  }
 });
 
 // 🧍 Registro de usuarios
@@ -315,7 +291,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       sub: null,
       dias: null,
       tickets: [],
-      productos, // ✅ se pasa al panel
+      productos,
     });
   } catch (err) {
     console.error('❌ Error en panel usuario:', err);
