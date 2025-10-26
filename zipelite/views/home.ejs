@@ -1,12 +1,98 @@
 <% layout = 'layout' %>
 <% var title = 'Inicio'; %>
 
-<div class="row align-items-center">
+<style>
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+
+  h1 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 25px #ff003c;
+  }
+
+  .lead {
+    color: #b8b8b8;
+  }
+
+  .btn-danger {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    border: none;
+    font-weight: 600;
+    transition: box-shadow 0.3s, transform 0.2s;
+  }
+
+  .btn-danger:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
+  }
+
+  .btn-outline-danger {
+    border: 1px solid #ff003c;
+    color: #ff003c;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .btn-outline-danger:hover {
+    background: #ff003c;
+    color: #fff;
+    box-shadow: 0 0 15px #ff003c;
+  }
+
+  .hero-img {
+    box-shadow: 0 0 30px rgba(255, 0, 60, 0.4);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .hero-img:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 40px rgba(255, 100, 0, 0.6);
+  }
+
+  hr {
+    border-color: rgba(255, 255, 255, 0.15);
+    margin-top: 3rem;
+    margin-bottom: 2rem;
+  }
+
+  .social-buttons .btn {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .btn-telegram {
+    background: #0088cc;
+    border: none;
+    color: #fff;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+
+  .btn-telegram:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #00bfff;
+  }
+
+  .btn-canal {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    color: #fff;
+    border: none;
+    transition: box-shadow 0.3s, transform 0.3s;
+  }
+
+  .btn-canal:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
+  }
+</style>
+
+<div class="row align-items-center mt-5">
   <div class="col-lg-6">
     <h1 class="display-5 fw-bold">Todo tu entretenimiento en un solo lugar.</h1>
-    <p class="lead text-secondary">Series, películas y música con planes flexibles.</p>
-    
-    <!-- 🔴 Se quitó el botón de “Ver catálogo”, solo queda Admin -->
+    <p class="lead">Series, películas y música con planes flexibles.</p>
+
     <div class="btn-group mb-3">
       <a class="btn btn-outline-danger" href="/admin">Admin</a>
       <a class="btn btn-danger" href="/login">Iniciar sesión</a>
@@ -15,9 +101,15 @@
 
   <div class="col-lg-6 text-center mt-4 mt-lg-0">
     <img src="/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg"
-         class="img-fluid rounded-4 shadow-lg"
+         class="img-fluid rounded-4 hero-img"
          alt="Hero">
   </div>
 </div>
 
-<!-- 🔒 Se eliminó el catálogo visible -->
+<hr>
+
+<!-- 🌐 Botones sociales -->
+<div class="text-center social-buttons mb-5">
+  <a href="https://t.me/EliteflixSoporte" target="_blank" class="btn btn-telegram me-3">💬 Soporte Telegram</a>
+  <a href="https://t.me/EliteflixCanal" target="_blank" class="btn btn-canal">📢 Canal Oficial</a>
+</div>
