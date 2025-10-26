@@ -1,248 +1,27 @@
 [
-  [
-    "Disney+ con ESPN/STAR",
-    "1M",
-    85,
-    "/public/brand/disney.svg"
-  ],
-  [
-    "HBO Max",
-    "1M",
-    65,
-    "/public/brand/hbomax.svg"
-  ],
-  [
-    "HBO Max 4 dispositivos",
-    "1M",
-    135,
-    "/public/brand/hbomax.svg"
-  ],
-  [
-    "Prime Video",
-    "1M",
-    65,
-    "/public/brand/prime.svg"
-  ],
-  [
-    "Prime cuenta completa",
-    "1M",
-    135,
-    "/public/brand/prime.svg"
-  ],
-  [
-    "Netflix",
-    "1M",
-    90,
-    "/public/brand/netflix.svg"
-  ],
-  [
-    "Viki Rakuten",
-    "1M",
-    55,
-    "/public/brand/viki.svg"
-  ],
-  [
-    "ViX",
-    "1M",
-    60,
-    "/public/brand/vix.svg"
-  ],
-  [
-    "ViX",
-    "3M",
-    90,
-    "/public/brand/vix.svg"
-  ],
-  [
-    "ViX",
-    "6M",
-    119,
-    "/public/brand/vix.svg"
-  ],
-  [
-    "ViX",
-    "Anual",
-    180,
-    "/public/brand/vix.svg"
-  ],
-  [
-    "Crunchyroll",
-    "1M",
-    50,
-    "/public/brand/crunchyroll.svg"
-  ],
-  [
-    "Crunchyroll",
-    "Anual",
-    169,
-    "/public/brand/crunchyroll.svg"
-  ],
-  [
-    "Deezer",
-    "1M",
-    70,
-    "/public/brand/deezer.svg"
-  ],
-  [
-    "Dramabox",
-    "1M",
-    90,
-    "/public/brand/dramabox.svg"
-  ],
-  [
-    "IPTV",
-    "1M",
-    90,
-    "/public/brand/iptv.svg"
-  ],
-  [
-    "Flujo TV",
-    "1M",
-    70,
-    "/public/brand/flujo.svg"
-  ],
-  [
-    "Pornhub",
-    "1M",
-    69,
-    "/public/brand/pornhub.svg"
-  ],
-  [
-    "Pornhub completa",
-    "1M",
-    135,
-    "/public/brand/pornhub.svg"
-  ],
-  [
-    "Apple Music",
-    "1M",
-    100,
-    "/public/brand/applemusic.svg"
-  ],
-  [
-    "Plex",
-    "1M",
-    55,
-    "/public/brand/plex.svg"
-  ],
-  [
-    "Tidal",
-    "1M",
-    59,
-    "/public/brand/tidal.svg"
-  ],
-  [
-    "Paramount",
-    "1M",
-    50,
-    "/public/brand/paramount.svg"
-  ],
-  [
-    "Paramount completa",
-    "1M",
-    100,
-    "/public/brand/paramount.svg"
-  ],
-  [
-    "Spotify",
-    "1M",
-    70,
-    "/public/brand/spotify.svg"
-  ],
-  [
-    "Spotify",
-    "3M",
-    155,
-    "/public/brand/spotify.svg"
-  ],
-  [
-    "YouTube",
-    "1M",
-    75,
-    "/public/brand/youtube.svg"
-  ],
-  [
-    "YouTube",
-    "2M",
-    125,
-    "/public/brand/youtube.svg"
-  ],
-  [
-    "YouTube",
-    "3M",
-    160,
-    "/public/brand/youtube.svg"
-  ],
-  [
-    "YouTube familiar",
-    "1M",
-    110,
-    "/public/brand/youtube.svg"
-  ],
-  [
-    "Canva",
-    "1M",
-    55,
-    "/public/brand/canva.svg"
-  ],
-  [
-    "Canva",
-    "3M",
-    89,
-    "/public/brand/canva.svg"
-  ],
-  [
-    "Canva",
-    "6M",
-    125,
-    "/public/brand/canva.svg"
-  ],
-  [
-    "Canva",
-    "Anual",
-    150,
-    "/public/brand/canva.svg"
-  ],
-  [
-    "Office 365",
-    "Anual",
-    300,
-    "/public/brand/office.svg"
-  ],
-  [
-    "Duolingo Plus",
-    "1M",
-    65,
-    "/public/brand/duolingo.svg"
-  ],
-  [
-    "Deezer Premium",
-    "1M",
-    60,
-    "/public/brand/deezer.svg"
-  ],
-  [
-    "Universal+",
-    "1M",
-    55,
-    "/public/brand/universal.svg"
-  ],
-  [
-    "Open English",
-    "6M",
-    1200,
-    "/public/brand/openenglish.svg"
-  ],
-  [
-    "CapCut Pro",
-    "1M",
-    150,
-    "/public/brand/capcut.svg"
-  ],
-  [
-    "ChatGPT Pro",
-    "1M",
-    150,
-    "/public/brand/chatgpt.svg"
-  ]
+  { "nombre": "Netflix", "logo": "/img/plataformas/netflix.svg" },
+  { "nombre": "YouTube", "logo": "/img/plataformas/youtube.svg" },
+  { "nombre": "Disney+", "logo": "/img/plataformas/disney.svg" },
+  { "nombre": "Spotify", "logo": "/img/plataformas/spotify.svg" },
+  { "nombre": "Amazon Prime Video", "logo": "/img/plataformas/prime.svg" },
+  { "nombre": "HBO Max", "logo": "/img/plataformas/hbomax.svg" },
+  { "nombre": "Canva", "logo": "/img/plataformas/canva.svg" },
+  { "nombre": "Duolingo", "logo": "/img/plataformas/duolingo.svg" },
+  { "nombre": "ChatGPT", "logo": "/img/plataformas/chatgpt.svg" },
+  { "nombre": "Crunchyroll", "logo": "/img/plataformas/crunchyroll.svg" },
+  { "nombre": "Deezer", "logo": "/img/plataformas/deezer.svg" },
+  { "nombre": "Paramount+", "logo": "/img/plataformas/paramount.svg" },
+  { "nombre": "ViX", "logo": "/img/plataformas/vix.svg" },
+  { "nombre": "Apple Music", "logo": "/img/plataformas/applemusic.svg" },
+  { "nombre": "Office 365", "logo": "/img/plataformas/office.svg" },
+  { "nombre": "Pornhub", "logo": "/img/plataformas/pornhub.svg" },
+  { "nombre": "Tidal", "logo": "/img/plataformas/tidal.svg" },
+  { "nombre": "IPTV", "logo": "/img/plataformas/iptv.svg" },
+  { "nombre": "CapCut", "logo": "/img/plataformas/capcut.svg" },
+  { "nombre": "Universal+", "logo": "/img/plataformas/universal.svg" },
+  { "nombre": "Flujo TV", "logo": "/img/plataformas/flujo.svg" },
+  { "nombre": "Plex", "logo": "/img/plataformas/plex.svg" },
+  { "nombre": "Open English", "logo": "/img/plataformas/openenglish.svg" },
+  { "nombre": "Dramabox", "logo": "/img/plataformas/dramabox.svg" },
+  { "nombre": "Viki Rakuten", "logo": "/img/plataformas/viki.svg" }
 ]
