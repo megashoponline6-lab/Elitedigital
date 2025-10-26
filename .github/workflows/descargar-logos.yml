@@ -11,7 +11,9 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Crear carpeta de logos
         run: mkdir -p "zipelite/public/img/plataformas"
@@ -52,9 +54,11 @@ jobs:
           done
 
       - name: Commit y push de los logos
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add zipelite/public/img/plataformas
-          git commit -m "Agregados logos oficiales de plataformas"
-          git push
+          git commit -m "Agregados logos oficiales de plataformas" || echo "No hay cambios para commitear"
+          git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }} HEAD:main
