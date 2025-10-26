@@ -1,5 +1,5 @@
 // ✅ server.js — versión final lista para Render
-// Sirve correctamente /img/plataformas/ y corrige nombres con IDs o extensiones distintas
+// Catálogo solo visible si el usuario ha iniciado sesión.
 
 import express from 'express';
 import session from 'express-session';
@@ -137,25 +137,13 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Catálogo público desde Platform
-app.get('/', async (req, res, next) => {
-  try {
-    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
-    const productos = platforms.map((p) => ({
-      nombre: p.name,
-      etiqueta: 'Streaming',
-      precio: 0,
-      logo: p.logoUrl,
-      activo: p.available ? 1 : 0,
-      disponible: p.available ? 1 : 0,
-    }));
-    res.render('home', { productos, etiquetas: [], filtro: '' });
-  } catch (e) {
-    next(e);
-  }
+// 🏠 Inicio (solo muestra hero, sin catálogo)
+app.get('/', (req, res) => {
+  res.render('home', { productos: [], etiquetas: [], filtro: '' });
 });
 
-app.get('/catalogo', async (req, res, next) => {
+// 🔐 Catálogo (solo usuarios logueados)
+app.get('/catalogo', requireAuth, async (req, res, next) => {
   try {
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
     const productos = platforms.map((p) => ({
