@@ -337,7 +337,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error al recargar saldo`);
+    res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
 
