@@ -1,4 +1,4 @@
-// ✅ server.js — versión final lista para Render
+// ✅ server.js — versión final lista para Render (ajustada para /public/uploads/)
 import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
@@ -45,7 +45,9 @@ app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
-app.use(express.static(path.join(process.cwd(), 'public'))); // ✅ permite usar /img/... directo
+
+// ✅ sirve los archivos de /public también bajo /public/ (para que funcionen los logos antiguos)
+app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
 // 💾 MongoDB
 if (process.env.MONGODB_URI) {
