@@ -79,7 +79,11 @@
                   <!-- Logo -->
                   <td>
                     <% if (p.logoUrl) { %>
-                      <img src="<%= p.logoUrl %>" style="height:40px; border-radius:8px;" alt="Logo <%= p.name %>" />
+                      <img 
+                        src="/<%= p.logoUrl.replace(/^\/?/, '') %>" 
+                        style="height:40px; border-radius:8px;" 
+                        alt="Logo <%= p.name %>" 
+                      />
                     <% } else { %>
                       <span class="text-secondary">Sin logo</span>
                     <% } %>
