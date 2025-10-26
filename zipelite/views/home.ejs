@@ -20,8 +20,12 @@
       <% } %>
     </div>
   </div>
+
   <div class="col-lg-6 text-center mt-4 mt-lg-0">
-    <img src="/public/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg" class="img-fluid rounded-4 shadow-lg" alt="Hero">
+    <!-- ✅ Hero image corregida: sin /public -->
+    <img src="/img/Imagen de WhatsApp 2025-10-17 a las 06.34.41_362da0e6.jpg"
+         class="img-fluid rounded-4 shadow-lg"
+         alt="Hero">
   </div>
 </div>
 
@@ -32,7 +36,8 @@
     <div class="col-6 col-md-4 col-lg-3">
       <div class="card h-100 bg-black border border-secondary rounded-4">
         <% if (p.logo) { %>
-          <img src="<%= p.logo %>" class="card-img-top rounded-top-4">
+          <!-- ✅ Logo de la plataforma (ya viene de Platform.logoUrl) -->
+          <img src="<%= p.logo %>" class="card-img-top rounded-top-4" alt="<%= p.nombre %>">
         <% } %>
         <div class="card-body">
           <span class="badge text-bg-danger mb-2"><%= p.etiqueta %></span>
