@@ -18,8 +18,14 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Crear carpeta de logos
-        run: mkdir -p "public/img/plataformas"
+      - name: Crear carpeta de logos (si no existe)
+        run: |
+          if [ ! -d "public/img/plataformas" ]; then
+            mkdir -p "public/img/plataformas"
+            echo "📁 Carpeta creada correctamente."
+          else
+            echo "📁 Carpeta ya existe, continuando..."
+          fi
 
       - name: Descargar logos SVG
         run: |
@@ -53,7 +59,7 @@ jobs:
 
           for name in "${!logos[@]}"; do
             echo "⬇️  Descargando $name ..."
-            curl -L "${logos[$name]}" -o "public/img/plataformas/$name"
+            curl -L --fail "${logos[$name]}" -o "public/img/plataformas/$name" || echo "⚠️ Error descargando $name, continuando..."
           done
 
       - name: Commit y push de los logos
@@ -63,5 +69,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add public/img/plataformas
-          git commit -m "Agregados logos oficiales de plataformas" || echo "No hay cambios para commitear"
+          git commit -m "Agregados logos oficiales de plataformas" || echo "🟢 No hay cambios para commitear."
           git push https://x-access-token:${TOKEN}@github.com/${{ github.repository }} HEAD:main
