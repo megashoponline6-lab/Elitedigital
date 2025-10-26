@@ -1,11 +1,14 @@
 name: Descargar logos oficiales
 
 on:
-  workflow_dispatch: # se ejecuta manualmente desde Actions
+  workflow_dispatch: # Se ejecuta manualmente desde Actions
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 🔥 Permite hacer commits y push al repo
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
