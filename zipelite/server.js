@@ -1,4 +1,4 @@
-// ✅ server.js — versión final lista para Render (sirve /img, /css y /public/uploads/)
+// ✅ server.js — versión final lista para Render (sirve /img, /css, /uploads y corrige /public/uploads)
 import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
@@ -46,11 +46,16 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ sirve archivos estáticos en ambas rutas:
-// - /img, /css, /js, etc.
-// - /public/uploads/... (para compatibilidad con rutas antiguas)
+// ✅ sirve archivos estáticos:
+// - /img, /css, /js, /uploads
+// - además corrige rutas antiguas /public/uploads/...
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
+
+// 🔄 Redirige /public/uploads/... → /uploads/...
+app.get('/public/uploads/:file', (req, res) => {
+  res.redirect(`/uploads/${req.params.file}`);
+});
 
 // 💾 MongoDB
 if (process.env.MONGODB_URI) {
@@ -332,7 +337,7 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
     res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error al recargar saldo');
+    res.redirect('/admin/panel?error=Error al recargar saldo`);
   }
 });
 
