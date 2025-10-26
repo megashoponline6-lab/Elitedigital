@@ -12,7 +12,7 @@
       <h5 class="mb-0">➕ Añadir nueva plataforma</h5>
     </div>
     <div class="card-body">
-      <form action="/admin/plataformas" method="POST" enctype="multipart/form-data">
+      <form action="/admin/plataformas" method="POST">
         <!-- ✅ Token CSRF -->
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
@@ -29,13 +29,14 @@
           </div>
 
           <div class="col-md-5">
-            <label class="form-label">Logo (opcional)</label>
+            <label class="form-label">Logo (ruta o nombre del archivo)</label>
             <input
-              type="file"
-              name="logoimg"
-              accept="image/*"
+              type="text"
+              name="logo"
               class="form-control bg-dark text-light border-secondary"
+              placeholder="/img/plataformas/netflix.png"
             />
+            <small class="text-secondary">Los logos deben estar en /public/img/plataformas/</small>
           </div>
 
           <div class="col-md-2">
@@ -61,7 +62,7 @@
               <th>Logo</th>
               <th>Nombre</th>
               <th>Disponible</th>
-              <th>Actualizar logo</th>
+              <th>Actualizar logo / ruta</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -96,22 +97,21 @@
                     <% } %>
                   </td>
 
-                  <!-- Actualizar logo -->
+                  <!-- Actualizar logo / ruta -->
                   <td>
                     <form
                       action="/admin/plataformas/<%= p._id %>/update"
                       method="POST"
-                      enctype="multipart/form-data"
                       class="d-flex align-items-center gap-2"
                     >
                       <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <input
-                        type="file"
-                        name="logoimg"
-                        accept="image/*"
+                        type="text"
+                        name="logo"
+                        value="<%= p.logoUrl || '' %>"
                         class="form-control form-control-sm bg-dark text-light"
-                        required
+                        placeholder="/img/plataformas/netflix.png"
                       />
                       <button class="btn btn-sm btn-outline-warning">Actualizar</button>
                     </form>
