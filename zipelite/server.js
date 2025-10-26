@@ -1,4 +1,4 @@
-// ✅ server.js — versión final lista para Render (ajustada para /public/uploads/)
+// ✅ server.js — versión final lista para Render (sirve /img, /css y /public/uploads/)
 import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
@@ -46,7 +46,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ sirve los archivos de /public también bajo /public/ (para que funcionen los logos antiguos)
+// ✅ sirve archivos estáticos en ambas rutas:
+// - /img, /css, /js, etc.
+// - /public/uploads/... (para compatibilidad con rutas antiguas)
+app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
 // 💾 MongoDB
