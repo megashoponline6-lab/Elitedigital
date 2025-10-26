@@ -1,0 +1,57 @@
+name: Descargar logos oficiales
+
+on:
+  workflow_dispatch: # se ejecuta manualmente desde Actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Crear carpeta de logos
+        run: mkdir -p public/img/plataformas
+
+      - name: Descargar logos SVG
+        run: |
+          declare -A logos=(
+            ["netflix.svg"]="https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg"
+            ["youtube.svg"]="https://upload.wikimedia.org/wikipedia/commons/b/b8/YouTube_Logo_2017.svg"
+            ["disney.svg"]="https://upload.wikimedia.org/wikipedia/commons/3/3e/Disney%2B_logo.svg"
+            ["spotify.svg"]="https://upload.wikimedia.org/wikipedia/commons/2/26/Spotify_logo_with_text.svg"
+            ["prime.svg"]="https://upload.wikimedia.org/wikipedia/commons/f/f1/Prime_Video_logo.svg"
+            ["hbomax.svg"]="https://upload.wikimedia.org/wikipedia/commons/1/17/HBO_Max_Logo.svg"
+            ["canva.svg"]="https://upload.wikimedia.org/wikipedia/commons/0/08/Canva_icon_2021.svg"
+            ["duolingo.svg"]="https://upload.wikimedia.org/wikipedia/commons/c/cc/Duolingo_logo.svg"
+            ["chatgpt.svg"]="https://upload.wikimedia.org/wikipedia/commons/0/04/ChatGPT_logo.svg"
+            ["crunchyroll.svg"]="https://upload.wikimedia.org/wikipedia/commons/f/f6/Crunchyroll_Logo.svg"
+            ["deezer.svg"]="https://upload.wikimedia.org/wikipedia/commons/7/7a/Deezer_Logo_2022.svg"
+            ["paramount.svg"]="https://upload.wikimedia.org/wikipedia/commons/5/5d/Paramount_Plus_logo.svg"
+            ["vix.svg"]="https://upload.wikimedia.org/wikipedia/commons/a/a1/ViX_logo.svg"
+            ["applemusic.svg"]="https://upload.wikimedia.org/wikipedia/commons/7/7e/Apple_Music_logo.svg"
+            ["office.svg"]="https://upload.wikimedia.org/wikipedia/commons/5/5f/Microsoft_Office_logo_%282019–present%29.svg"
+            ["pornhub.svg"]="https://upload.wikimedia.org/wikipedia/commons/5/57/Pornhub_logo.svg"
+            ["tidal.svg"]="https://upload.wikimedia.org/wikipedia/commons/8/80/Tidal_logo.svg"
+            ["iptv.svg"]="https://upload.wikimedia.org/wikipedia/commons/4/43/IPTV_logo_2021.svg"
+            ["capcut.svg"]="https://upload.wikimedia.org/wikipedia/commons/d/d8/CapCut_logo.svg"
+            ["universal.svg"]="https://upload.wikimedia.org/wikipedia/commons/8/8a/Universal_Plus_logo.svg"
+            ["flujo.svg"]="https://upload.wikimedia.org/wikipedia/commons/1/1e/Flujo_TV_logo.svg"
+            ["plex.svg"]="https://upload.wikimedia.org/wikipedia/commons/f/f2/Plex_logo_2022.svg"
+            ["openenglish.svg"]="https://upload.wikimedia.org/wikipedia/commons/2/2d/Open_English_logo.svg"
+            ["dramabox.svg"]="https://upload.wikimedia.org/wikipedia/commons/9/97/Dramabox_logo.svg"
+            ["viki.svg"]="https://upload.wikimedia.org/wikipedia/commons/0/0b/Viki_logo.svg"
+          )
+
+          for name in "${!logos[@]}"; do
+            echo "⬇️  Descargando $name ..."
+            curl -L "${logos[$name]}" -o "public/img/plataformas/$name"
+          done
+
+      - name: Commit y push de los logos
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add public/img/plataformas
+          git commit -m "Agregados logos oficiales de plataformas"
+          git push
