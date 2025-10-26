@@ -1,4 +1,6 @@
-// ✅ server.js — versión final lista para Render (sirve /img, /css, /uploads y corrige /public/uploads)
+// ✅ server.js — versión final lista para Render
+// Corrige rutas de imágenes y sirve correctamente /img/plataformas/
+
 import express from 'express';
 import session from 'express-session';
 import helmet from 'helmet';
@@ -46,18 +48,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ sirve archivos estáticos:
+// ✅ Sirve archivos estáticos
 // - /img, /css, /js, /uploads
-// - además corrige rutas antiguas /public/uploads/...
+// - Corrige rutas antiguas /public/uploads/ → /img/plataformas/
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🔄 Redirige /public/uploads/... → /uploads/...
+// 🔄 Redirección automática de rutas antiguas
 app.get('/public/uploads/:file', (req, res) => {
-  res.redirect(`/uploads/${req.params.file}`);
+  // Redirige a la carpeta real donde están tus imágenes
+  res.redirect(`/img/plataformas/${req.params.file}`);
 });
 
-// 💾 MongoDB
+// 💾 Conexión MongoDB
 if (process.env.MONGODB_URI) {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -241,7 +244,7 @@ app.post(
   }
 );
 
-// 🧑‍💼 Login de admin (Mongo)
+// 🧑‍💼 Login de admin
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
