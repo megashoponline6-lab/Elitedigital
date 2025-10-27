@@ -1,5 +1,5 @@
 // ✅ server.js — versión final lista para Render
-// Catálogo solo visible dentro del panel del usuario (ya no existe /catalogo).
+// Catálogo visible solo dentro del panel y con rutas de detalle de plataforma.
 
 import express from 'express';
 import session from 'express-session';
@@ -48,25 +48,22 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Sirve archivos estáticos (img, css, js, uploads)
+// ✅ Archivos estáticos
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🔄 Redirección inteligente de /public/uploads/... → /img/plataformas/...
+// 🔄 Redirección de imágenes antiguas
 app.get('/public/uploads/:file', (req, res) => {
   const fileName = req.params.file;
   const baseDir = path.join(process.cwd(), 'public', 'img', 'plataformas');
 
-  // Intenta primero con el nombre original
   let finalPath = path.join(baseDir, fileName);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${fileName}`);
 
-  // Si no existe, intenta sin número inicial tipo 1761108813828-
   const cleanName = fileName.replace(/^\d+-/, '');
   finalPath = path.join(baseDir, cleanName);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${cleanName}`);
 
-  // Si no existe el .png, intenta con .svg
   const svgAlt = cleanName.replace(/\.png$/i, '.svg');
   finalPath = path.join(baseDir, svgAlt);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${svgAlt}`);
@@ -75,7 +72,7 @@ app.get('/public/uploads/:file', (req, res) => {
   res.status(404).send('Imagen no encontrada');
 });
 
-// 💾 Conexión MongoDB
+// 💾 MongoDB
 if (process.env.MONGODB_URI) {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -115,7 +112,7 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧑‍💻 Crear admin por defecto si no existe
+// 🧑‍💻 Crear admin por defecto
 const adminExists = await Admin.findOne({ usuario: 'ml3838761@gmail.com' }).lean();
 if (!adminExists) {
   const passhash = await bcrypt.hash('07141512', 12);
@@ -131,12 +128,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Inicio (solo muestra hero, sin catálogo)
+// 🏠 Inicio (solo muestra hero)
 app.get('/', (req, res) => {
   res.render('home', { productos: [], etiquetas: [], filtro: '' });
 });
 
-// 🧍 Registro de usuarios
+// 🧍 Registro
 app.get('/registro', csrfProtection, (req, res) =>
   res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
 );
@@ -186,7 +183,7 @@ app.post(
   }
 );
 
-// 🔐 Login de usuarios
+// 🔐 Login usuario
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
@@ -229,7 +226,7 @@ app.post(
   }
 );
 
-// 🧑‍💼 Login de admin
+// 🧑‍💼 Login admin
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
@@ -273,29 +270,40 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario (con catálogo dentro)
+// 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
 
     const productos = platforms.map((p) => ({
+      _id: p._id,
       nombre: p.name,
       logo: p.logoUrl,
-      etiqueta: 'Streaming',
     }));
 
-    res.render('panel', {
-      csrfToken: req.csrfToken(),
-      user,
-      sub: null,
-      dias: null,
-      tickets: [],
-      productos,
-    });
+    res.render('panel', { csrfToken: req.csrfToken(), user, sub: null, dias: null, tickets: [], productos });
   } catch (err) {
     console.error('❌ Error en panel usuario:', err);
     res.redirect('/login?error=Reinicia tu sesión');
+  }
+});
+
+// 🎬 Detalle de plataforma (planes)
+app.get('/plataforma/:id', requireAuth, async (req, res) => {
+  try {
+    const plataforma = await Platform.findById(req.params.id).lean();
+    if (!plataforma) return res.status(404).send('Plataforma no encontrada');
+
+    const precios = [];
+    for (let i = 1; i <= 12; i++) {
+      precios.push({ meses: i, precio: (plataforma.precioBase || 30) * i });
+    }
+
+    res.render('plataforma', { plataforma, precios });
+  } catch (err) {
+    console.error('❌ Error cargando plataforma:', err);
+    res.status(500).send('Error interno del servidor');
   }
 });
 
@@ -314,33 +322,11 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
     res.render('admin/panel', {
       csrfToken: req.csrfToken(),
       usuarios,
-      productos: [],
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
-      errores: [],
-      ok: req.query.ok || null,
-      error: req.query.error || null,
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
     res.redirect('/admin?error=Error al cargar el panel');
-  }
-});
-
-// 💰 Recargar saldo
-app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
-  try {
-    const { correo, monto, nota } = req.body;
-    const user = await User.findOne({ correo: correo.toLowerCase() });
-    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
-
-    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
-    await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
-
-    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo} (${nota || 'Recarga manual'})`);
-    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
-  } catch (err) {
-    console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
 
@@ -349,7 +335,7 @@ app.get(['/logout', '/admin/salir'], (req, res) => {
   req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada correctamente'));
 });
 
-// ⚠️ Errores 404 y 500
+// ⚠️ Errores
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res) => {
   console.error('❌ Error interno:', err);
