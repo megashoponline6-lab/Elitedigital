@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 import fs from 'fs';
 import expressLayouts from 'express-ejs-layouts';
 import mongoose from 'mongoose';
+import MongoStore from 'connect-mongo';
 
 import User from './models/User.js';
 import Admin from './models/Admin.js';
@@ -83,12 +84,16 @@ if (process.env.MONGODB_URI) {
   console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
-// 🧠 Sesión
+// 🧠 Sesión persistente con MongoDB
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'clave-insegura',
     resave: false,
     saveUninitialized: false,
+    store: MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: 'sessions',
+    }),
     cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 },
   })
 );
@@ -281,10 +286,13 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       logo: p.logoUrl,
     }));
 
+    // 🔧 subs inicializado vacío para evitar ReferenceError en EJS
+    const subs = [];
+
     res.render('panel', {
       csrfToken: req.csrfToken(),
       user,
-      sub: null,
+      subs,
       dias: null,
       tickets: [],
       productos,
@@ -301,7 +309,6 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
     const plataforma = await Platform.findById(req.params.id).lean();
     if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
-    // Si la plataforma no tiene precios configurados, se genera una tabla de 1 a 12 meses con base 30 MXN/mes
     const precios = [];
     for (let i = 1; i <= 12; i++) {
       const precio = (plataforma.precioBase || 30) * i;
@@ -315,7 +322,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 💳 Adquirir plan (descuenta del saldo y registra "suscripción" como Account si así lo decides)
+// 💳 Adquirir plan
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -331,9 +338,6 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     user.saldo -= costo;
     await user.save();
 
-    // Nota: tu Account actual es para "cuentas ofrecidas" (email/password/slots).
-    // Si quieres guardar compras del usuario, crea un modelo aparte (Subscription).
-    // Por ahora solo descontamos saldo y te mandamos el OK.
     res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
   } catch (err) {
     console.error('❌ Error al adquirir plan:', err);
@@ -341,7 +345,7 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   }
 });
 
-// 🧮 Panel admin (✅ se pasan 'errores', y ordena por createdAt)
+// 🧮 Panel admin
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
@@ -357,7 +361,6 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
       csrfToken: req.csrfToken(),
       usuarios,
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
-      // 👇 Estas tres props evitan el 500 al renderizar includes/condicionales
       errores: [],
       ok: req.query.ok || null,
       error: req.query.error || null,
@@ -368,7 +371,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 💰 Recargar saldo (usado por el formulario del panel admin)
+// 💰 Recargar saldo
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
