@@ -1,0 +1,68 @@
+<% layout = 'layout' %>
+<% var title = plataforma.name + ' | Planes'; %>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+
+  h2 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
+  }
+
+  .plan-card {
+    background: rgba(25, 25, 35, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    text-align: center;
+    padding: 1.5rem;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+
+  .plan-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 20px rgba(255, 0, 100, 0.4);
+  }
+
+  .btn-adquirir {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    transition: box-shadow 0.3s, transform 0.2s;
+  }
+
+  .btn-adquirir:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
+  }
+
+  .platform-logo {
+    border-radius: 1rem;
+    height: 180px;
+    object-fit: contain;
+    background: rgba(0, 0, 0, 0.5);
+    margin-bottom: 1.5rem;
+  }
+</style>
+
+<div class="container text-center mt-5">
+  <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" class="platform-logo shadow-lg">
+  <h2 class="fw-bold mb-4">Planes para <%= plataforma.name %></h2>
+
+  <div class="row g-3 justify-content-center">
+    <% precios.forEach(p => { %>
+      <div class="col-6 col-md-4 col-lg-3">
+        <div class="plan-card">
+          <h5><%= p.meses %> mes<%= p.meses > 1 ? 'es' : '' %></h5>
+          <p class="fs-5 text-info mb-3">$<%= p.precio %> MXN</p>
+          <button class="btn btn-adquirir w-100">Adquirir</button>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+
+  <a href="/panel" class="btn btn-outline-light mt-4">⬅ Volver al panel</a>
+</div>
