@@ -1,49 +1,50 @@
-// ✅ models/Account.js — Versión final lista para Render (ESM)
+// ✅ models/Account.js — Versión final con suscripciones funcionales
 import mongoose from 'mongoose';
 
 const AccountSchema = new mongoose.Schema(
   {
-    // 🔗 Relación con la plataforma (Netflix, Spotify, etc.)
+    // 🔗 Plataforma asociada (Netflix, Disney+, etc.)
     platform: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Platform',
       required: true
     },
 
-    // 📧 Correo de acceso de la cuenta
-    email: {
-      type: String,
-      required: true,
-      trim: true
-    },
-
-    // 🔒 Contraseña asociada a la cuenta
-    password: {
-      type: String,
+    // 📧 Correo del usuario que adquirió el plan
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true
     },
 
-    // 🎟️ Cupos disponibles (veces que puede asignarse)
-    slots: {
+    // 🕐 Meses de duración
+    meses: {
       type: Number,
-      required: true,
-      min: 0
+      required: true
     },
 
-    // ⚙️ Estado activo/inactivo
-    active: {
+    // 💰 Precio pagado por el usuario
+    precioPagado: {
+      type: Number,
+      required: true
+    },
+
+    // 📅 Fecha de vencimiento
+    vence_en: {
+      type: Date,
+      required: true
+    },
+
+    // 🔒 Estado de la suscripción
+    activo: {
       type: Boolean,
       default: true
     }
   },
-  {
-    timestamps: true // 📅 Añade createdAt y updatedAt automáticamente
-  }
+  { timestamps: true }
 );
 
-// 📈 Índice compuesto para búsquedas rápidas por plataforma y correo
-AccountSchema.index({ platform: 1, email: 1 });
+AccountSchema.index({ userId: 1, platform: 1 });
 
-// 🚀 Exportación para módulos ESM (Render / Node 18+)
 const Account = mongoose.model('Account', AccountSchema);
 export default Account;
