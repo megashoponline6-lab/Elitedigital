@@ -289,15 +289,23 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 🎬 Detalle de plataforma (planes)
+// 🎬 Detalle de plataforma (planes con precios desde DB)
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
     const plataforma = await Platform.findById(req.params.id).lean();
     if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
     const precios = [];
-    for (let i = 1; i <= 12; i++) {
-      precios.push({ meses: i, precio: (plataforma.precioBase || 30) * i });
+    for (let i of [1, 3, 6, 12]) {
+      const valor = plataforma.precios?.[i];
+      if (valor && valor > 0) precios.push({ meses: i, precio: valor });
+    }
+
+    // Si no hay precios configurados, genera precios base temporales
+    if (precios.length === 0) {
+      for (let i = 1; i <= 12; i++) {
+        precios.push({ meses: i, precio: (plataforma.precioBase || 30) * i });
+      }
     }
 
     res.render('plataforma', { plataforma, precios });
