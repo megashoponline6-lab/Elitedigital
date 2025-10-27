@@ -60,28 +60,10 @@
     margin-top: 2rem;
   }
 
-  .catalogo-container h3 {
-    text-shadow: 0 0 10px #00b7ff;
-  }
-
   .platform-logo {
     border-radius: 0.75rem 0.75rem 0 0;
     height: 150px;
     object-fit: cover;
-    transition: filter 0.3s, transform 0.3s;
-  }
-
-  .platform-logo:hover {
-    filter: drop-shadow(0 0 10px #00ffff);
-    transform: scale(1.05);
-  }
-
-  .card-body small {
-    color: #9aa;
-  }
-
-  hr {
-    border-color: rgba(255, 255, 255, 0.15);
   }
 </style>
 
@@ -90,7 +72,6 @@
   <p class="text-secondary mb-4">Explora nuestras plataformas disponibles</p>
 
   <div class="row g-4">
-    <!-- 🧍 Datos del usuario -->
     <div class="col-md-4">
       <div class="neon-box p-4 h-100">
         <h5 class="mb-3">Mis datos</h5>
@@ -101,20 +82,9 @@
           <p><strong>Teléfono:</strong> <%= user.telefono %></p>
         <% } %>
         <p class="saldo mt-3">Saldo: $<%= user.saldo %> MXN</p>
-
-        <% if (sub) { %>
-          <hr>
-          <h6 class="text-light mb-2">Suscripción activa</h6>
-          <p><strong>Servicio:</strong> <%= sub.prod_nombre %></p>
-          <p><strong>Vence:</strong> <%= dayjs(sub.vence_en).format('DD/MM/YYYY') %></p>
-        <% } else { %>
-          <hr>
-          <p class="text-secondary mb-0">No tienes una suscripción activa.</p>
-        <% } %>
       </div>
     </div>
 
-    <!-- 🎬 Catálogo -->
     <div class="col-md-8">
       <div class="catalogo-container">
         <h3 class="mb-3">Catálogo de plataformas</h3>
@@ -129,7 +99,7 @@
                   <div class="card-body">
                     <h6 class="text-light"><%= p.nombre %></h6>
                     <small class="d-block mb-2 text-secondary">Explora planes disponibles</small>
-                    <a href="/catalogo" class="btn btn-neon w-100">Explorar planes</a>
+                    <a href="/plataforma/<%= p._id %>" class="btn btn-neon w-100">Explorar planes</a>
                   </div>
                 </div>
               </div>
