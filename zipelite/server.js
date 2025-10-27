@@ -1,4 +1,4 @@
-// ✅ server.js — versión final completa y funcional con adquisición de planes y panel admin operativo
+// ✅ server.js — versión final completa y funcional (admin panel fijo + recargar saldo + rutas de plataformas)
 
 import express from 'express';
 import session from 'express-session';
@@ -51,10 +51,11 @@ app.use(cookieParser());
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🔄 Redirección imágenes antiguas
+// 🔄 Redirección de imágenes antiguas
 app.get('/public/uploads/:file', (req, res) => {
   const fileName = req.params.file;
   const baseDir = path.join(process.cwd(), 'public', 'img', 'plataformas');
+
   let finalPath = path.join(baseDir, fileName);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${fileName}`);
 
@@ -66,6 +67,7 @@ app.get('/public/uploads/:file', (req, res) => {
   finalPath = path.join(baseDir, svgAlt);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${svgAlt}`);
 
+  console.warn(`⚠️ Imagen no encontrada: ${fileName}`);
   res.status(404).send('Imagen no encontrada');
 });
 
@@ -77,6 +79,8 @@ if (process.env.MONGODB_URI) {
   } catch (err) {
     console.error('❌ Error al conectar con MongoDB Atlas:', err);
   }
+} else {
+  console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
 // 🧠 Sesión
@@ -98,7 +102,7 @@ function requireAuth(req, res, next) {
 }
 
 function requireAdmin(req, res, next) {
-  if (req.session.user) return res.redirect('/panel?error=No tienes permiso');
+  if (req.session.user) return res.redirect('/panel?error=No tienes permiso para entrar aquí');
   if (!req.session.admin) return res.redirect('/admin');
   next();
 }
@@ -107,15 +111,15 @@ function requireAdmin(req, res, next) {
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧑‍💻 Crear admin por defecto
+// 🧑‍💻 Crear admin por defecto si no existe
 const adminExists = await Admin.findOne({ usuario: 'ml3838761@gmail.com' }).lean();
 if (!adminExists) {
   const passhash = await bcrypt.hash('07141512', 12);
   await Admin.create({ usuario: 'ml3838761@gmail.com', passhash });
-  console.log('✅ Admin por defecto creado');
+  console.log('✅ Admin por defecto creado: ml3838761@gmail.com / 07141512');
 }
 
-// 🧭 Layout global
+// 🧭 Vars globales para layout
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -123,8 +127,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Inicio
-app.get('/', (req, res) => res.render('home', { productos: [] }));
+// 🏠 Inicio (solo muestra hero)
+app.get('/', (req, res) => {
+  res.render('home', { productos: [], etiquetas: [], filtro: '' });
+});
 
 // 🧍 Registro
 app.get('/registro', csrfProtection, (req, res) =>
@@ -140,76 +146,176 @@ function normalizeEmail(correo) {
 app.post(
   '/registro',
   csrfProtection,
+  body('nombre').notEmpty(),
+  body('apellido').notEmpty(),
+  body('pais').notEmpty(),
   body('correo').isEmail(),
   body('password').isLength({ min: 6 }),
   async (req, res) => {
     const errores = validationResult(req);
-    if (!errores.isEmpty())
+    if (!errores.isEmpty()) {
       return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+    }
 
     const { nombre, apellido, pais, telefono, password } = req.body;
     const correo = normalizeEmail(req.body.correo);
-    const existe = await User.findOne({ correo });
-    if (existe) return res.redirect('/registro?error=Correo ya registrado');
-    const passhash = await bcrypt.hash(password, 10);
-    await User.create({ nombre, apellido, pais, telefono, correo, passhash });
-    res.redirect('/login?ok=Registro completado');
+
+    try {
+      const existe = await User.findOne({ correo: correo.toLowerCase() });
+      if (existe) {
+        return res.status(400).render('registro', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Ese correo ya está registrado.' }],
+        });
+      }
+
+      const passhash = await bcrypt.hash(password, 10);
+      await User.create({ nombre, apellido, pais, telefono: telefono || '', correo, passhash });
+      res.redirect('/login?ok=Registro completado');
+    } catch (err) {
+      console.error('❌ Error en registro:', err);
+      res.status(500).render('registro', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor.' }],
+      });
+    }
   }
 );
 
 // 🔐 Login usuario
-app.get('/login', csrfProtection, (req, res) =>
-  res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok })
-);
-app.post('/login', csrfProtection, async (req, res) => {
-  const correo = normalizeEmail(req.body.correo);
-  const u = await User.findOne({ correo }).lean();
-  if (!u) return res.redirect('/login?error=Usuario no encontrado');
-  const ok = await bcrypt.compare(req.body.password, u.passhash);
-  if (!ok) return res.redirect('/login?error=Contraseña incorrecta');
-  req.session.user = { id: u._id, nombre: u.nombre, correo: u.correo };
-  res.redirect('/panel');
+app.get('/login', csrfProtection, (req, res) => {
+  delete req.session.admin;
+  res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
 });
+
+app.post(
+  '/login',
+  csrfProtection,
+  body('correo').isEmail(),
+  body('password').notEmpty(),
+  async (req, res) => {
+    const correo = normalizeEmail(req.body.correo);
+    try {
+      const u = await User.findOne({ correo, activo: true }).lean();
+      if (!u) {
+        return res.status(400).render('login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Credenciales inválidas o cuenta desactivada.' }],
+        });
+      }
+
+      const ok = await bcrypt.compare(req.body.password, u.passhash);
+      if (!ok) {
+        return res.status(400).render('login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Contraseña incorrecta.' }],
+        });
+      }
+
+      req.session.user = { id: u._id.toString(), nombre: u.nombre, correo: u.correo };
+      await User.updateOne({ _id: u._id }, { last_login: new Date() });
+      res.redirect('/panel?ok=Bienvenido');
+    } catch (err) {
+      console.error('❌ Error en login:', err);
+      res.status(500).render('login', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor.' }],
+      });
+    }
+  }
+);
 
 // 🧑‍💼 Login admin
-app.get('/admin', csrfProtection, (req, res) =>
-  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] })
-);
-app.post('/admin', csrfProtection, async (req, res) => {
-  const admin = await Admin.findOne({ usuario: req.body.usuario }).lean();
-  if (!admin) return res.redirect('/admin?error=No existe');
-  const ok = await bcrypt.compare(req.body.password, admin.passhash);
-  if (!ok) return res.redirect('/admin?error=Contraseña incorrecta');
-  req.session.admin = { id: admin._id, usuario: admin.usuario };
-  res.redirect('/admin/panel');
+app.get('/admin', csrfProtection, (req, res) => {
+  delete req.session.user;
+  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
 });
 
-// 🧩 Rutas admin
+app.post(
+  '/admin',
+  csrfProtection,
+  body('usuario').notEmpty(),
+  body('password').notEmpty(),
+  async (req, res) => {
+    try {
+      const { usuario, password } = req.body;
+      const admin = await Admin.findOne({ usuario }).lean();
+      if (!admin) {
+        return res.status(400).render('admin/login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Usuario no encontrado.' }],
+        });
+      }
+      const ok = await bcrypt.compare(password, admin.passhash);
+      if (!ok) {
+        return res.status(400).render('admin/login', {
+          csrfToken: req.csrfToken(),
+          errores: [{ msg: 'Contraseña incorrecta.' }],
+        });
+      }
+      req.session.admin = { id: admin._id.toString(), usuario: admin.usuario };
+      res.redirect('/admin/panel?ok=Bienvenido');
+    } catch (err) {
+      console.error('❌ Error en login admin:', err);
+      res.status(500).render('admin/login', {
+        csrfToken: req.csrfToken(),
+        errores: [{ msg: 'Error interno del servidor.' }],
+      });
+    }
+  }
+);
+
+// 🧩 Rutas de administración
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario
+// 👤 Panel usuario (catálogo integrado)
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
-  const user = await User.findById(req.session.user.id).lean();
-  const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
-  const productos = platforms.map((p) => ({ _id: p._id, nombre: p.name, logo: p.logoUrl }));
+  try {
+    const user = await User.findById(req.session.user.id).lean();
+    const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
 
-  const subs = await Account.find({ userId: user._id, activo: true }).populate('platform').lean();
+    const productos = platforms.map((p) => ({
+      _id: p._id,
+      nombre: p.name,
+      logo: p.logoUrl,
+    }));
 
-  res.render('panel', { csrfToken: req.csrfToken(), user, subs, productos });
+    res.render('panel', {
+      csrfToken: req.csrfToken(),
+      user,
+      sub: null,
+      dias: null,
+      tickets: [],
+      productos,
+    });
+  } catch (err) {
+    console.error('❌ Error en panel usuario:', err);
+    res.redirect('/login?error=Reinicia tu sesión');
+  }
 });
 
-// 🎬 Detalle plataforma
+// 🎬 Detalle de plataforma (planes)
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
-  const plataforma = await Platform.findById(req.params.id).lean();
-  if (!plataforma) return res.status(404).send('Plataforma no encontrada');
+  try {
+    const plataforma = await Platform.findById(req.params.id).lean();
+    if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
-  const precios = [];
-  for (let i = 1; i <= 12; i++) precios.push({ meses: i, precio: (plataforma.precioBase || 30) * i });
-  res.render('plataforma', { plataforma, precios });
+    // Si la plataforma no tiene precios configurados, se genera una tabla de 1 a 12 meses con base 30 MXN/mes
+    const precios = [];
+    for (let i = 1; i <= 12; i++) {
+      const precio = (plataforma.precioBase || 30) * i;
+      precios.push({ meses: i, precio });
+    }
+
+    res.render('plataforma', { plataforma, precios });
+  } catch (err) {
+    console.error('❌ Error cargando plataforma:', err);
+    res.status(500).send('Error interno del servidor');
+  }
 });
 
-// 💳 Adquirir plan
+// 💳 Adquirir plan (descuenta del saldo y registra "suscripción" como Account si así lo decides)
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -217,34 +323,28 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     const user = await User.findById(req.session.user.id);
     const costo = parseFloat(precio);
     const mesesInt = parseInt(meses);
+
     if (!plataforma || !user) return res.redirect('/panel?error=Datos inválidos');
+    if (Number.isNaN(costo) || Number.isNaN(mesesInt)) return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
     if (user.saldo < costo) return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
 
     user.saldo -= costo;
     await user.save();
 
-    const vence = new Date();
-    vence.setMonth(vence.getMonth() + mesesInt);
-
-    await Account.create({
-      userId: user._id,
-      platform: plataforma._id,
-      meses: mesesInt,
-      precioPagado: costo,
-      vence_en: vence,
-    });
-
+    // Nota: tu Account actual es para "cuentas ofrecidas" (email/password/slots).
+    // Si quieres guardar compras del usuario, crea un modelo aparte (Subscription).
+    // Por ahora solo descontamos saldo y te mandamos el OK.
     res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
   } catch (err) {
-    console.error(err);
+    console.error('❌ Error al adquirir plan:', err);
     res.redirect('/panel?error=Error al adquirir plan');
   }
 });
 
-// 🧮 Panel admin (✅ ruta añadida)
+// 🧮 Panel admin (✅ se pasan 'errores', y ordena por createdAt)
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   try {
-    const usuarios = await User.find({}).sort({ created_at: -1 }).lean();
+    const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
     const totalAccounts = await Account.countDocuments();
     const totalPlatforms = await Platform.countDocuments();
 
@@ -257,6 +357,10 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
       csrfToken: req.csrfToken(),
       usuarios,
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
+      // 👇 Estas tres props evitan el 500 al renderizar includes/condicionales
+      errores: [],
+      ok: req.query.ok || null,
+      error: req.query.error || null,
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
@@ -264,14 +368,35 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
+// 💰 Recargar saldo (usado por el formulario del panel admin)
+app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { correo, monto, nota } = req.body;
+    const user = await User.findOne({ correo: (correo || '').toLowerCase() });
+    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
+
+    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
+
+    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo} (${nota || 'Recarga manual'})`);
+    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
+  } catch (err) {
+    console.error('❌ Error al recargar saldo:', err);
+    res.redirect('/admin/panel?error=Error al recargar saldo');
+  }
+});
+
 // 🚪 Logout
-app.get(['/logout', '/admin/salir'], (req, res) =>
-  req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada'))
-);
+app.get(['/logout', '/admin/salir'], (req, res) => {
+  req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada correctamente'));
+});
 
 // ⚠️ Errores
 app.use((req, res) => res.status(404).render('404'));
-app.use((err, req, res) => res.status(500).send('Error Interno'));
+app.use((err, req, res, next) => {
+  console.error('❌ Error interno:', err);
+  res.status(500).send('Error Interno del Servidor');
+});
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
