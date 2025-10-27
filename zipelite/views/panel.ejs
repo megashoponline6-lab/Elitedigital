@@ -65,6 +65,31 @@
     height: 150px;
     object-fit: cover;
   }
+
+  /* === Tabla de suscripciones === */
+  .table-neon {
+    background: rgba(15, 15, 25, 0.7);
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3);
+    border-radius: 1rem;
+  }
+
+  .table-neon th {
+    color: #00eaff;
+    text-shadow: 0 0 10px #00eaff;
+  }
+
+  .table-neon td {
+    color: #eee;
+  }
+
+  .table-neon tbody tr:hover {
+    background: rgba(255, 0, 80, 0.15);
+  }
+
+  hr {
+    border-color: rgba(255, 255, 255, 0.1);
+  }
 </style>
 
 <div class="container mt-4">
@@ -72,6 +97,7 @@
   <p class="text-secondary mb-4">Explora nuestras plataformas disponibles</p>
 
   <div class="row g-4">
+    <!-- 🧍 Datos del usuario -->
     <div class="col-md-4">
       <div class="neon-box p-4 h-100">
         <h5 class="mb-3">Mis datos</h5>
@@ -85,6 +111,7 @@
       </div>
     </div>
 
+    <!-- 🎬 Catálogo -->
     <div class="col-md-8">
       <div class="catalogo-container">
         <h3 class="mb-3">Catálogo de plataformas</h3>
@@ -110,5 +137,57 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- ================================ -->
+  <!-- 📋 MIS SUSCRIPCIONES ACTIVAS -->
+  <!-- ================================ -->
+  <hr class="my-5">
+
+  <div class="neon-box p-4 mt-4">
+    <h3 class="mb-4 text-center">📅 Mis suscripciones activas</h3>
+
+    <% if (subs && subs.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-neon table-borderless align-middle text-center">
+          <thead>
+            <tr>
+              <th>Plataforma</th>
+              <th>Duración</th>
+              <th>Precio Pagado</th>
+              <th>Vence En</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% subs.forEach(s => { %>
+              <tr>
+                <td>
+                  <% if (s.platform && s.platform.logoUrl) { %>
+                    <img src="<%= s.platform.logoUrl %>" alt="<%= s.platform.name %>" style="height:40px; border-radius:6px;">
+                    <br>
+                    <small><%= s.platform.name %></small>
+                  <% } else { %>
+                    <%= s.platform ? s.platform.name : 'N/A' %>
+                  <% } %>
+                </td>
+                <td><%= s.meses %> mes<%= s.meses > 1 ? 'es' : '' %></td>
+                <td>$<%= s.precioPagado %> MXN</td>
+                <td><%= dayjs(s.vence_en).format('DD/MM/YYYY') %></td>
+                <td>
+                  <% if (s.activo) { %>
+                    <span class="badge bg-success">Activa</span>
+                  <% } else { %>
+                    <span class="badge bg-secondary">Inactiva</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-secondary text-center">No tienes suscripciones activas aún.</p>
+    <% } %>
   </div>
 </div>
