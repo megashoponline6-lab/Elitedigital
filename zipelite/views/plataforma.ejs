@@ -23,7 +23,7 @@
 
   .plan-card:hover {
     transform: scale(1.03);
-    box-shadow: 0 0 20px rgba(255, 0, 100, 0.4);
+    box-shadow: 0 0 25px rgba(255, 0, 100, 0.4);
   }
 
   .btn-adquirir {
@@ -46,6 +46,31 @@
     background: rgba(0, 0, 0, 0.5);
     margin-bottom: 1.5rem;
   }
+
+  /* Modal estilo neón */
+  .modal-content {
+    background: rgba(15, 15, 25, 0.95);
+    color: #fff;
+    border: 1px solid rgba(255, 0, 60, 0.4);
+    box-shadow: 0 0 25px rgba(255, 0, 60, 0.3);
+  }
+
+  .modal-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .modal-title {
+    text-shadow: 0 0 10px #ff003c;
+  }
+
+  .modal-footer button {
+    font-weight: 600;
+  }
+
+  .text-info {
+    color: #00eaff !important;
+    text-shadow: 0 0 10px #00eaff;
+  }
 </style>
 
 <div class="container text-center mt-5">
@@ -58,7 +83,14 @@
         <div class="plan-card">
           <h5><%= p.meses %> mes<%= p.meses > 1 ? 'es' : '' %></h5>
           <p class="fs-5 text-info mb-3">$<%= p.precio %> MXN</p>
-          <button class="btn btn-adquirir w-100">Adquirir</button>
+          <button class="btn btn-adquirir w-100" 
+                  data-bs-toggle="modal"
+                  data-bs-target="#confirmModal"
+                  data-meses="<%= p.meses %>"
+                  data-precio="<%= p.precio %>"
+                  data-nombre="<%= plataforma.name %>">
+            Adquirir
+          </button>
         </div>
       </div>
     <% }) %>
@@ -66,3 +98,35 @@
 
   <a href="/panel" class="btn btn-outline-light mt-4">⬅ Volver al panel</a>
 </div>
+
+<!-- 🔮 Modal de confirmación -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmModalLabel">Confirmar adquisición</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p id="modalText" class="fs-5"></p>
+      </div>
+      <div class="modal-footer justify-content-center">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-adquirir">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 🎛️ Mostrar información dinámica en el modal
+  const modal = document.getElementById('confirmModal');
+  modal.addEventListener('show.bs.modal', event => {
+    const button = event.relatedTarget;
+    const meses = button.getAttribute('data-meses');
+    const precio = button.getAttribute('data-precio');
+    const nombre = button.getAttribute('data-nombre');
+    const text = `¿Deseas adquirir el plan de ${meses} mes${meses > 1 ? 'es' : ''} de <strong>${nombre}</strong> por <span class="text-info">$${precio} MXN</span>?`;
+    modal.querySelector('#modalText').innerHTML = text;
+  });
+</script>
