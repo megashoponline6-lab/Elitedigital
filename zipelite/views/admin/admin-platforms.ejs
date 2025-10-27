@@ -13,7 +13,6 @@
     </div>
     <div class="card-body">
       <form action="/admin/plataformas" method="POST">
-        <!-- ✅ Token CSRF -->
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
         <div class="row g-3 align-items-center">
@@ -63,36 +62,30 @@
               <th>Nombre</th>
               <th>Disponible</th>
               <th>Actualizar logo / ruta</th>
+              <th>💰 Precios (1,3,6,12M)</th>
               <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             <% if (platforms.length === 0) { %>
               <tr>
-                <td colspan="5" class="text-center text-secondary py-4">
+                <td colspan="6" class="text-center text-secondary py-4">
                   No hay plataformas registradas
                 </td>
               </tr>
             <% } else { %>
               <% platforms.forEach(p => { %>
                 <tr>
-                  <!-- Logo -->
                   <td>
                     <% if (p.logoUrl) { %>
-                      <img 
-                        src="/<%= p.logoUrl.replace(/^\/?/, '') %>" 
-                        style="height:40px; border-radius:8px;" 
-                        alt="Logo <%= p.name %>" 
-                      />
+                      <img src="/<%= p.logoUrl.replace(/^\/?/, '') %>" style="height:40px; border-radius:8px;" alt="Logo <%= p.name %>" />
                     <% } else { %>
                       <span class="text-secondary">Sin logo</span>
                     <% } %>
                   </td>
 
-                  <!-- Nombre -->
                   <td><strong><%= p.name %></strong></td>
 
-                  <!-- Disponible -->
                   <td>
                     <% if (p.available) { %>
                       <span class="badge bg-success">Sí</span>
@@ -101,14 +94,13 @@
                     <% } %>
                   </td>
 
-                  <!-- Actualizar logo / ruta -->
+                  <!-- Logo / ruta -->
                   <td>
                     <form
                       action="/admin/plataformas/<%= p._id %>/update"
                       method="POST"
                       class="d-flex align-items-center gap-2"
                     >
-                      <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <input
                         type="text"
@@ -121,14 +113,33 @@
                     </form>
                   </td>
 
+                  <!-- 💰 Editar precios -->
+                  <td>
+                    <form action="/admin/plataformas/<%= p._id %>/precios" method="POST" class="d-flex flex-column gap-1">
+                      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark text-light border-secondary">1M</span>
+                        <input type="number" name="mes1" value="<%= p.precios?.[1] || '' %>" class="form-control bg-dark text-light border-secondary">
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark text-light border-secondary">3M</span>
+                        <input type="number" name="mes3" value="<%= p.precios?.[3] || '' %>" class="form-control bg-dark text-light border-secondary">
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark text-light border-secondary">6M</span>
+                        <input type="number" name="mes6" value="<%= p.precios?.[6] || '' %>" class="form-control bg-dark text-light border-secondary">
+                      </div>
+                      <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-dark text-light border-secondary">12M</span>
+                        <input type="number" name="mes12" value="<%= p.precios?.[12] || '' %>" class="form-control bg-dark text-light border-secondary">
+                      </div>
+                      <button class="btn btn-sm btn-outline-info mt-1">Guardar</button>
+                    </form>
+                  </td>
+
                   <!-- Eliminar -->
                   <td>
-                    <form
-                      action="/admin/plataformas/<%= p._id %>/delete"
-                      method="POST"
-                      onsubmit="return confirm('¿Eliminar esta plataforma?')"
-                    >
-                      <!-- ✅ Token CSRF -->
+                    <form action="/admin/plataformas/<%= p._id %>/delete" method="POST" onsubmit="return confirm('¿Eliminar esta plataforma?')">
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                     </form>
