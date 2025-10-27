@@ -2,75 +2,15 @@
 <% var title = plataforma.name + ' | Planes'; %>
 
 <style>
-  body {
-    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
-    color: #e0e0e0;
-  }
-
-  h2 {
-    color: #fff;
-    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
-  }
-
-  .plan-card {
-    background: rgba(25, 25, 35, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 1rem;
-    text-align: center;
-    padding: 1.5rem;
-    transition: transform 0.3s, box-shadow 0.3s;
-  }
-
-  .plan-card:hover {
-    transform: scale(1.03);
-    box-shadow: 0 0 25px rgba(255, 0, 100, 0.4);
-  }
-
-  .btn-adquirir {
-    background: linear-gradient(90deg, #ff003c, #ff6a00);
-    border: none;
-    color: #fff;
-    font-weight: 600;
-    transition: box-shadow 0.3s, transform 0.2s;
-  }
-
-  .btn-adquirir:hover {
-    transform: scale(1.05);
-    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
-  }
-
-  .platform-logo {
-    border-radius: 1rem;
-    height: 180px;
-    object-fit: contain;
-    background: rgba(0, 0, 0, 0.5);
-    margin-bottom: 1.5rem;
-  }
-
-  /* Modal estilo neón */
-  .modal-content {
-    background: rgba(15, 15, 25, 0.95);
-    color: #fff;
-    border: 1px solid rgba(255, 0, 60, 0.4);
-    box-shadow: 0 0 25px rgba(255, 0, 60, 0.3);
-  }
-
-  .modal-header {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .modal-title {
-    text-shadow: 0 0 10px #ff003c;
-  }
-
-  .modal-footer button {
-    font-weight: 600;
-  }
-
-  .text-info {
-    color: #00eaff !important;
-    text-shadow: 0 0 10px #00eaff;
-  }
+  body { background: linear-gradient(135deg, #0a0a0f 40%, #120028); color: #e0e0e0; }
+  h2 { color: #fff; text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c; }
+  .plan-card { background: rgba(25,25,35,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:1rem; text-align:center; padding:1.5rem; transition:transform .3s,box-shadow .3s; }
+  .plan-card:hover { transform:scale(1.03); box-shadow:0 0 25px rgba(255,0,100,0.4); }
+  .btn-adquirir { background:linear-gradient(90deg,#ff003c,#ff6a00); border:none; color:#fff; font-weight:600; transition:box-shadow .3s,transform .2s; }
+  .btn-adquirir:hover { transform:scale(1.05); box-shadow:0 0 20px #ff003c,0 0 30px #ff6a00; }
+  .platform-logo { border-radius:1rem; height:180px; object-fit:contain; background:rgba(0,0,0,.5); margin-bottom:1.5rem; }
+  .modal-content { background:rgba(15,15,25,.95); color:#fff; border:1px solid rgba(255,0,60,.4); box-shadow:0 0 25px rgba(255,0,60,.3); }
+  .text-info { color:#00eaff!important; text-shadow:0 0 10px #00eaff; }
 </style>
 
 <div class="container text-center mt-5">
@@ -83,12 +23,13 @@
         <div class="plan-card">
           <h5><%= p.meses %> mes<%= p.meses > 1 ? 'es' : '' %></h5>
           <p class="fs-5 text-info mb-3">$<%= p.precio %> MXN</p>
-          <button class="btn btn-adquirir w-100" 
-                  data-bs-toggle="modal"
-                  data-bs-target="#confirmModal"
-                  data-meses="<%= p.meses %>"
-                  data-precio="<%= p.precio %>"
-                  data-nombre="<%= plataforma.name %>">
+          <button class="btn btn-adquirir w-100"
+            data-bs-toggle="modal"
+            data-bs-target="#confirmModal"
+            data-id="<%= plataforma._id %>"
+            data-meses="<%= p.meses %>"
+            data-precio="<%= p.precio %>"
+            data-nombre="<%= plataforma.name %>">
             Adquirir
           </button>
         </div>
@@ -99,34 +40,41 @@
   <a href="/panel" class="btn btn-outline-light mt-4">⬅ Volver al panel</a>
 </div>
 
-<!-- 🔮 Modal de confirmación -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="confirmModalLabel">Confirmar adquisición</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body text-center">
-        <p id="modalText" class="fs-5"></p>
-      </div>
-      <div class="modal-footer justify-content-center">
-        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-adquirir">Confirmar</button>
+<!-- 🔮 Modal -->
+<form id="adquirirForm" method="POST">
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Confirmar adquisición</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body text-center">
+          <p id="modalText" class="fs-5"></p>
+          <input type="hidden" name="meses" id="inputMeses">
+          <input type="hidden" name="precio" id="inputPrecio">
+        </div>
+        <div class="modal-footer justify-content-center">
+          <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-adquirir">Confirmar</button>
+        </div>
       </div>
     </div>
   </div>
-</div>
+</form>
 
 <script>
-  // 🎛️ Mostrar información dinámica en el modal
-  const modal = document.getElementById('confirmModal');
-  modal.addEventListener('show.bs.modal', event => {
-    const button = event.relatedTarget;
-    const meses = button.getAttribute('data-meses');
-    const precio = button.getAttribute('data-precio');
-    const nombre = button.getAttribute('data-nombre');
-    const text = `¿Deseas adquirir el plan de ${meses} mes${meses > 1 ? 'es' : ''} de <strong>${nombre}</strong> por <span class="text-info">$${precio} MXN</span>?`;
-    modal.querySelector('#modalText').innerHTML = text;
+  const modal=document.getElementById('confirmModal');
+  const form=document.getElementById('adquirirForm');
+  modal.addEventListener('show.bs.modal',event=>{
+    const btn=event.relatedTarget;
+    const meses=btn.getAttribute('data-meses');
+    const precio=btn.getAttribute('data-precio');
+    const nombre=btn.getAttribute('data-nombre');
+    const id=btn.getAttribute('data-id');
+    document.getElementById('modalText').innerHTML=`¿Deseas adquirir el plan de ${meses} mes${meses>1?'es':''} de <strong>${nombre}</strong> por <span class='text-info'>$${precio} MXN</span>?`;
+    document.getElementById('inputMeses').value=meses;
+    document.getElementById('inputPrecio').value=precio;
+    form.action=`/plataforma/${id}/adquirir`;
   });
 </script>
