@@ -149,6 +149,7 @@ function normalizeEmail(correo) {
   return m ? m[1] + m[3] : correo;
 }
 
+// 🧑 Registro de usuario
 app.post(
   '/registro',
   csrfProtection,
@@ -394,7 +395,7 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     // 🔻 Descontar 1 cupo de la cuenta
     await Account.updateOne({ _id: cuenta._id }, { $inc: { cupos: -1 } });
 
-    console.log(`✅ Cupo descontado en ${cuenta.correo} (${cuenta.cupos - 1} restantes)`);
+    console.log(`✅ Cupo descontado en ${cuenta.correo} (${(cuenta.cupos ?? 1) - 1} restantes)`);
 
     res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
   } catch (err) {
@@ -475,7 +476,7 @@ app.use((err, req, res, next) => {
   res.status(500).send('Error Interno del Servidor');
 });
 
-// 🕐 CRON INTERNO — desactivar suscripciones vencidas cada 24h
+// 🕐 CRON INTERNO — desactivar suscripciones vencidas cada 24h (no libera cupos)
 setInterval(async () => {
   const ahora = new Date();
   try {
