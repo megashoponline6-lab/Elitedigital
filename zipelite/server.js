@@ -62,7 +62,6 @@ app.use(cookieParser());
 // 📦 Estáticos
 // ───────────────────────────────────────────────────────────────────────────────
 app.use(express.static(path.join(process.cwd(), 'public')));
-app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
 // Compatibilidad imágenes antiguas /public/uploads → /img/plataformas
 app.get('/public/uploads/:file', (req, res) => {
