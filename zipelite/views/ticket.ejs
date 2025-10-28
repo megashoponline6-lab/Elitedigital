@@ -3,7 +3,7 @@
   <% if (sess && sess.admin) { %>
     <div style="background:#e50914;color:white;padding:10px 15px;border-radius:10px;margin-bottom:20px;text-align:center;font-weight:600;">
       👁️ Vista de administrador — Ticket perteneciente a 
-      <%= suscripcion.userId ? suscripcion.userId.correo : 'Usuario desconocido' %>
+      <%= suscripcion.userId ? (suscripcion.userId.correo || suscripcion.userId.toString()) : 'Usuario desconocido' %>
       <br>
       <button onclick="window.location.href='/admin/suscripciones'" style="margin-top:8px;padding:6px 12px;border:none;border-radius:8px;background:#fff;color:#e50914;cursor:pointer;font-weight:600;">
         ⬅️ Volver al Panel Admin
@@ -26,12 +26,16 @@
 
   <div style="margin-top:15px;">
     <p><strong>📧 Correo asignado:</strong> 
-      <span id="correo" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;"><%= suscripcion.datosCuenta.correo %></span>
+      <span id="correo" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;">
+        <%= suscripcion.datosCuenta?.correo || 'No disponible' %>
+      </span>
       <button onclick="copiar('correo')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
 
     <p><strong>🔑 Contraseña:</strong> 
-      <span id="password" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;"><%= suscripcion.datosCuenta.password %></span>
+      <span id="password" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;">
+        <%= suscripcion.datosCuenta?.password || 'No disponible' %>
+      </span>
       <button onclick="copiar('password')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
   </div>
