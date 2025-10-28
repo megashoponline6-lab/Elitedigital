@@ -142,7 +142,9 @@
       placeholder="Buscar por usuario, correo o plataforma..."
     />
     <button id="toggleVencidas" class="toggle-btn">Mostrar vencidas</button>
-    <span id="contador" class="contador">Mostrando <%= subs.filter(s => s.activa).length %> de <%= subs.length %></span>
+    <span id="contador" class="contador">
+      Mostrando <%= subs.filter(s => s.activa).length %> de <%= subs.length %>
+    </span>
   </div>
 
   <div class="neon-box">
@@ -204,7 +206,7 @@
   const toggleBtn = document.getElementById('toggleVencidas');
   let mostrarVencidas = false;
 
-  // Al cargar: ocultar las vencidas
+  // Ocultar las vencidas al cargar
   filas.forEach(f => {
     if (f.classList.contains('vencida')) f.style.display = 'none';
   });
