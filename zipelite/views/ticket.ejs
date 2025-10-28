@@ -1,40 +1,40 @@
-<div id="ticket" style="max-width:650px;margin:40px auto;padding:25px;border-radius:20px;background:#fff;box-shadow:0 0 15px rgba(0,0,0,0.15);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow:auto;">
+<div id="ticket" style="max-width:700px;margin:30px auto;padding:30px;border-radius:20px;background:#121212;color:#fff;box-shadow:0 0 20px rgba(0,0,0,0.5);font-family:'Segoe UI',sans-serif;">
   <div style="text-align:center;">
     <% if (plataforma.logoUrl) { %>
-      <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:70px;margin-bottom:10px;">
+      <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:90px;margin-bottom:10px;">
     <% } %>
     <h2 style="margin:10px 0;color:#e50914;">🎟️ Ticket de Compra</h2>
-    <p style="color:#666;">Gracias por confiar en <strong>Eliteflix</strong></p>
+    <p style="color:#bbb;">Gracias por confiar en <strong style="color:#fff;">Eliteflix</strong></p>
   </div>
 
-  <hr style="margin:20px 0;">
+  <hr style="margin:20px 0;border-color:#333;">
 
-  <p><strong>Plataforma:</strong> <%= plataforma.name %></p>
-  <p><strong>Duración:</strong> <%= suscripcion.meses %> mes<%= suscripcion.meses > 1 ? 'es' : '' %></p>
+  <p><strong>🎬 Plataforma:</strong> <span style="color:#e50914;"><%= plataforma.name %></span></p>
+  <p><strong>⏱️ Duración:</strong> <%= suscripcion.meses %> mes<%= suscripcion.meses > 1 ? 'es' : '' %></p>
 
   <div style="margin-top:15px;">
-    <p><strong>Correo asignado:</strong> 
-      <span id="correo" style="background:#f4f4f4;padding:4px 8px;border-radius:6px;"><%= suscripcion.datosCuenta.correo %></span>
-      <button onclick="copiar('correo')" style="margin-left:5px;padding:4px 8px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
+    <p><strong>📧 Correo asignado:</strong> 
+      <span id="correo" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;"><%= suscripcion.datosCuenta.correo %></span>
+      <button onclick="copiar('correo')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
 
-    <p><strong>Contraseña:</strong> 
-      <span id="password" style="background:#f4f4f4;padding:4px 8px;border-radius:6px;"><%= suscripcion.datosCuenta.password %></span>
-      <button onclick="copiar('password')" style="margin-left:5px;padding:4px 8px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
+    <p><strong>🔑 Contraseña:</strong> 
+      <span id="password" style="background:#222;padding:5px 10px;border-radius:6px;color:#fff;"><%= suscripcion.datosCuenta.password %></span>
+      <button onclick="copiar('password')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
   </div>
 
-  <div style="margin-top:20px;background:#f8f8f8;padding:10px 15px;border-left:4px solid #e50914;border-radius:8px;">
-    <p style="margin:0;"><strong>💬 Mensaje del administrador:</strong></p>
-    <p style="margin:5px 0 0 0;color:#444;white-space:pre-line;"><%= mensaje %></p>
+  <div style="margin-top:25px;background:#1e1e1e;padding:15px 20px;border-left:5px solid #e50914;border-radius:10px;">
+    <p style="margin:0 0 8px 0;"><strong>💬 Mensaje del administrador:</strong></p>
+    <p style="margin:0;color:#ddd;white-space:pre-line;"><%= mensaje %></p>
   </div>
 
-  <div style="margin-top:20px;">
-    <p><strong>Fecha de inicio:</strong> <%= dayjs(suscripcion.fechaInicio).format('DD/MM/YYYY') %></p>
-    <p><strong>Fecha de fin:</strong> <%= dayjs(suscripcion.fechaFin).format('DD/MM/YYYY') %></p>
+  <div style="margin-top:25px;">
+    <p><strong>📅 Fecha de inicio:</strong> <%= dayjs(suscripcion.fechaInicio).format('DD/MM/YYYY') %></p>
+    <p><strong>⏳ Fecha de fin:</strong> <%= dayjs(suscripcion.fechaFin).format('DD/MM/YYYY') %></p>
   </div>
 
-  <div style="text-align:center;margin-top:30px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
+  <div style="text-align:center;margin-top:35px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
     <button onclick="window.location.href='/panel'" style="padding:10px 20px;border:none;border-radius:10px;background:#333;color:#fff;cursor:pointer;font-weight:600;">
       ⬅️ Volver al Panel
     </button>
@@ -44,12 +44,12 @@
     </button>
   </div>
 
-  <div style="margin-top:30px;text-align:center;color:#888;font-size:13px;">
+  <div style="margin-top:40px;text-align:center;color:#888;font-size:13px;">
     <p>Eliteflix © <%= new Date().getFullYear() %> — Todos los derechos reservados</p>
   </div>
 </div>
 
-<!-- ✅ Librería para generar PDF desde el navegador -->
+<!-- 📦 Librería para convertir HTML a PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
 <script>
@@ -60,20 +60,22 @@ function copiar(id) {
   });
 }
 
-// 📄 Generar PDF real con nombre dinámico
+// ✅ Generar PDF sin recortes
 document.getElementById('btnPDF').addEventListener('click', () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
   const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
 
-  const opciones = {
-    margin: 0.5,
+  const opt = {
+    margin: 0.3,
     filename: nombreArchivo,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
+    image: { type: 'jpeg', quality: 1 },
+    html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  html2pdf().from(ticket).set(opciones).save();
+  // Hacemos scroll hacia arriba para que capture todo
+  window.scrollTo(0, 0);
+  html2pdf().from(ticket).set(opt).save();
 });
 </script>
