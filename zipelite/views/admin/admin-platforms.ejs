@@ -35,7 +35,9 @@
               class="form-control bg-dark text-light border-secondary"
               placeholder="/img/plataformas/netflix.png"
             />
-            <small class="text-secondary">Los logos deben estar en /public/img/plataformas/</small>
+            <small class="text-secondary">
+              Los logos deben estar en <code>/public/img/plataformas/</code>
+            </small>
           </div>
 
           <div class="col-md-2">
@@ -50,9 +52,13 @@
   <!-- TABLA DE PLATAFORMAS -->
   <!-- ============================== -->
   <div class="card bg-dark border-secondary shadow">
-    <div class="card-header border-secondary">
+    <div class="card-header border-secondary d-flex justify-content-between align-items-center">
       <h5 class="mb-0">📋 Plataformas registradas</h5>
+      <span class="text-secondary small">
+        Total: <%= platforms.length %>
+      </span>
     </div>
+
     <div class="card-body p-0">
       <div class="table-responsive">
         <table class="table table-dark table-hover align-middle mb-0">
@@ -62,10 +68,11 @@
               <th>Nombre</th>
               <th>Disponible</th>
               <th>Actualizar logo / ruta</th>
-              <th>💰 Precios (1,3,6,12M)</th>
+              <th>💰 Precios (1M / 3M / 6M / 12M)</th>
               <th>Acciones</th>
             </tr>
           </thead>
+
           <tbody>
             <% if (platforms.length === 0) { %>
               <tr>
@@ -76,16 +83,23 @@
             <% } else { %>
               <% platforms.forEach(p => { %>
                 <tr>
+                  <!-- 🖼️ Logo -->
                   <td>
                     <% if (p.logoUrl) { %>
-                      <img src="/<%= p.logoUrl.replace(/^\/?/, '') %>" style="height:40px; border-radius:8px;" alt="Logo <%= p.name %>" />
+                      <img
+                        src="/<%= p.logoUrl.replace(/^\/?/, '') %>"
+                        style="height: 40px; border-radius: 8px;"
+                        alt="Logo <%= p.name %>"
+                      />
                     <% } else { %>
                       <span class="text-secondary">Sin logo</span>
                     <% } %>
                   </td>
 
+                  <!-- 📛 Nombre -->
                   <td><strong><%= p.name %></strong></td>
 
+                  <!-- 🟢 Disponible -->
                   <td>
                     <% if (p.available) { %>
                       <span class="badge bg-success">Sí</span>
@@ -94,7 +108,7 @@
                     <% } %>
                   </td>
 
-                  <!-- Logo / ruta -->
+                  <!-- 🖼️ Actualizar logo -->
                   <td>
                     <form
                       action="/admin/plataformas/<%= p._id %>/update"
@@ -106,7 +120,7 @@
                         type="text"
                         name="logoUrl"
                         value="<%= p.logoUrl || '' %>"
-                        class="form-control form-control-sm bg-dark text-light"
+                        class="form-control form-control-sm bg-dark text-light border-secondary"
                         placeholder="/img/plataformas/netflix.png"
                       />
                       <button class="btn btn-sm btn-outline-warning">Actualizar</button>
@@ -115,7 +129,11 @@
 
                   <!-- 💰 Editar precios -->
                   <td>
-                    <form action="/admin/plataformas/<%= p._id %>/precios" method="POST" class="d-flex flex-column gap-1">
+                    <form
+                      action="/admin/plataformas/<%= p._id %>/precios"
+                      method="POST"
+                      class="d-flex flex-column gap-1"
+                    >
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <div class="input-group input-group-sm">
                         <span class="input-group-text bg-dark text-light border-secondary">1M</span>
@@ -137,9 +155,13 @@
                     </form>
                   </td>
 
-                  <!-- Eliminar -->
+                  <!-- 🗑️ Eliminar -->
                   <td>
-                    <form action="/admin/plataformas/<%= p._id %>/delete" method="POST" onsubmit="return confirm('¿Eliminar esta plataforma?')">
+                    <form
+                      action="/admin/plataformas/<%= p._id %>/delete"
+                      method="POST"
+                      onsubmit="return confirm('¿Eliminar esta plataforma?')"
+                    >
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
                       <button class="btn btn-sm btn-outline-danger">Eliminar</button>
                     </form>
