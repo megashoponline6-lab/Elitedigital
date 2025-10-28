@@ -1,16 +1,16 @@
-// ✅ models/Account.js — versión final y funcional con cupos automáticos
+// ✅ models/Account.js — versión final con rotación ordenada de cupos
 import mongoose from 'mongoose';
 
 const AccountSchema = new mongoose.Schema(
   {
-    // 🎬 Plataforma asociada (Netflix, Disney+, etc.)
+    // 🎬 Plataforma asociada (Netflix, Disney+, YouTube, etc.)
     plataformaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Platform',
       required: true,
     },
 
-    // 📧 Correo y contraseña de la cuenta compartida
+    // 📧 Credenciales de la cuenta compartida
     correo: {
       type: String,
       required: true,
@@ -24,23 +24,29 @@ const AccountSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // 👥 Cupos disponibles (ej: Netflix con 4 cupos)
+    // 👥 Cupos disponibles (por ejemplo, Netflix con 4 cupos)
     cupos: {
       type: Number,
       required: true,
       min: 0,
     },
 
-    // 📋 Estado de la cuenta (activa o pausada)
+    // ⚙️ Estado de la cuenta (activa o pausada)
     activa: {
       type: Boolean,
       default: true,
+    },
+
+    // 🔁 Control de rotación (para usar la menos reciente primero)
+    lastUsed: {
+      type: Date,
+      default: Date.now,
     },
   },
   { timestamps: true }
 );
 
-// 🔎 Índice para mejorar búsquedas por plataforma
+// 🔎 Índice para búsquedas rápidas por plataforma y correo
 AccountSchema.index({ plataformaId: 1, correo: 1 });
 
 // ✅ Evita error de modelo duplicado en Render/Vercel
