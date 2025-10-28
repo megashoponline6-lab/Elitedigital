@@ -1,4 +1,4 @@
-// ✅ server.js — versión completa (admin panel + saldo + suscripciones + cupos automáticos)
+// ✅ server.js — versión completa (admin panel + saldo + suscripciones + cupos automáticos + TICKET)
 
 import express from 'express';
 import session from 'express-session';
@@ -46,7 +46,7 @@ app.set('layout', 'layout');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.json()));
 app.use(cookieParser());
 
 // ✅ Archivos estáticos
@@ -188,6 +188,7 @@ app.post(
     }
   }
 );
+
 // 🔐 Login usuario
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
@@ -322,7 +323,6 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     res.redirect('/login?error=Reinicia tu sesión');
   }
 });
-
 // 🎬 Detalle de plataforma
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
@@ -374,11 +374,10 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
 
     // 📆 Fechas de suscripción
     const fechaInicio = new Date();
-    const fechaFin = new Date();
-    fechaFin.setMonth(fechaFin.getMonth() + mesesInt);
+    const fechaFin = dayjs(fechaInicio).add(mesesInt, 'month').toDate();
 
-    // 🧾 Crear suscripción con datos de la cuenta asignada
-    await Subscription.create({
+    // 🧾 Crear suscripción con datos de la cuenta asignada (GUARDAMOS ID)
+    const nuevaSuscripcion = await Subscription.create({
       userId: user._id,
       platformId: plataforma._id,
       meses: mesesInt,
@@ -397,10 +396,48 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
 
     console.log(`✅ Cupo descontado en ${cuenta.correo} (${(cuenta.cupos ?? 1) - 1} restantes)`);
 
-    res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
+    // 🎟️ Redirigir al Ticket de compra
+    return res.redirect(`/ticket/${nuevaSuscripcion._id}`);
   } catch (err) {
     console.error('❌ Error al adquirir plan:', err);
     res.redirect('/panel?error=Error al adquirir plan');
+  }
+});
+
+// 🎟️ Ticket de compra — muestra plataforma, duración, credenciales y mensaje admin
+app.get('/ticket/:id', requireAuth, async (req, res) => {
+  try {
+    const suscripcion = await Subscription.findById(req.params.id)
+      .populate('platformId')
+      .lean();
+
+    if (!suscripcion) return res.status(404).render('404');
+
+    // Validar que la suscripción pertenece al usuario en sesión
+    const userId = req.session.user?.id?.toString();
+    if (suscripcion.userId?.toString() !== userId) {
+      return res.status(403).render('404');
+    }
+
+    // Plataforma + mensaje por duración
+    const plataforma = suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
+    const dur = String(suscripcion.meses);
+    // Soporta estructura nueva `mensajes: {1,3,6,12}` o fallback a campos legacy por si existen
+    const mensaje =
+      (plataforma?.mensajes && (plataforma.mensajes[dur] || plataforma.mensajes[suscripcion.meses])) ||
+      plataforma?.[`mensaje_${dur}`] ||
+      plataforma?.[`mensaje_${suscripcion.meses}`] ||
+      'Gracias por tu compra.';
+
+    return res.render('ticket', {
+      suscripcion,
+      plataforma,
+      mensaje,
+      dayjs,
+    });
+  } catch (err) {
+    console.error('❌ Error mostrando ticket:', err);
+    return res.status(500).send('Error interno del servidor');
   }
 });
 
