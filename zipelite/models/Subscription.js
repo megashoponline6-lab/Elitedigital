@@ -1,4 +1,4 @@
-// ✅ models/Subscription.js — versión final y funcional para registrar compras de usuarios
+// ✅ models/Subscription.js — versión completa y funcional con datos de cuenta asignada
 
 import mongoose from 'mongoose';
 
@@ -33,7 +33,7 @@ const subscriptionSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // 📅 Fecha de inicio y fin de la suscripción
+    // 📅 Fechas de inicio y fin
     fechaInicio: {
       type: Date,
       default: Date.now,
@@ -42,16 +42,22 @@ const subscriptionSchema = new mongoose.Schema(
       type: Date,
     },
 
-    // 🟢 Estado actual (por si luego querés desactivar automáticamente)
+    // 🟢 Estado actual de la suscripción
     activa: {
       type: Boolean,
       default: true,
+    },
+
+    // 🧾 Datos de la cuenta asignada (Netflix, Disney+, etc.)
+    datosCuenta: {
+      correo: { type: String },
+      password: { type: String },
     },
   },
   { timestamps: true }
 );
 
-// ✅ Evita error de modelo duplicado en Render
+// ✅ Evita error de modelo duplicado en entornos como Render
 const Subscription =
   mongoose.models.Subscription ||
   mongoose.model('Subscription', subscriptionSchema);
