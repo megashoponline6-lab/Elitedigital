@@ -2,19 +2,73 @@
 <% var title = plataforma.name + ' | Planes'; %>
 
 <style>
-  body { background: linear-gradient(135deg, #0a0a0f 40%, #120028); color: #e0e0e0; }
-  h2 { color: #fff; text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c; }
-  .plan-card { background: rgba(25,25,35,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:1rem; text-align:center; padding:1.5rem; transition:transform .3s,box-shadow .3s; }
-  .plan-card:hover { transform:scale(1.03); box-shadow:0 0 25px rgba(255,0,100,0.4); }
-  .btn-adquirir { background:linear-gradient(90deg,#ff003c,#ff6a00); border:none; color:#fff; font-weight:600; transition:box-shadow .3s,transform .2s; }
-  .btn-adquirir:hover { transform:scale(1.05); box-shadow:0 0 20px #ff003c,0 0 30px #ff6a00; }
-  .platform-logo { border-radius:1rem; height:180px; object-fit:contain; background:rgba(0,0,0,.5); margin-bottom:1.5rem; }
-  .modal-content { background:rgba(15,15,25,.95); color:#fff; border:1px solid rgba(255,0,60,.4); box-shadow:0 0 25px rgba(255,0,60,.3); }
-  .text-info { color:#00eaff!important; text-shadow:0 0 10px #00eaff; }
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+  h2 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
+  }
+  .plan-card {
+    background: rgba(25,25,35,0.8);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 1rem;
+    text-align: center;
+    padding: 1.5rem;
+    transition: transform .3s, box-shadow .3s;
+  }
+  .plan-card:hover {
+    transform: scale(1.03);
+    box-shadow: 0 0 25px rgba(255,0,100,0.4);
+  }
+  .btn-adquirir {
+    background: linear-gradient(90deg,#ff003c,#ff6a00);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    transition: box-shadow .3s, transform .2s;
+  }
+  .btn-adquirir:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
+  }
+  .platform-logo {
+    border-radius: 1rem;
+    height: 180px;
+    object-fit: contain;
+    background: rgba(0,0,0,.5);
+    margin-bottom: 1.5rem;
+  }
+  .modal-content {
+    background: rgba(15,15,25,.95);
+    color: #fff;
+    border: 1px solid rgba(255,0,60,.4);
+    box-shadow: 0 0 25px rgba(255,0,60,.3);
+  }
+  .text-info {
+    color: #00eaff!important;
+    text-shadow: 0 0 10px #00eaff;
+  }
 </style>
 
 <div class="container text-center mt-5">
-  <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" class="platform-logo shadow-lg">
+  <% 
+    // ✅ Detectar automáticamente si el logo viene de /uploads o de /img/plataformas
+    let logoPath;
+    if (plataforma.logoUrl) {
+      // si el backend ya pasa una URL completa
+      logoPath = plataforma.logoUrl;
+    } else if (plataforma.logo && plataforma.logo.includes('uploads')) {
+      logoPath = '/' + plataforma.logo;
+    } else if (plataforma.logo) {
+      logoPath = '/img/plataformas/' + plataforma.logo;
+    } else {
+      logoPath = '/img/default.png'; // fallback opcional
+    }
+  %>
+
+  <img src="<%= logoPath %>" alt="<%= plataforma.name %>" class="platform-logo shadow-lg">
   <h2 class="fw-bold mb-4">Planes para <%= plataforma.name %></h2>
 
   <div class="row g-3 justify-content-center">
@@ -40,7 +94,7 @@
   <a href="/panel" class="btn btn-outline-light mt-4">⬅ Volver al panel</a>
 </div>
 
-<!-- 🔮 Modal -->
+<!-- 🔮 Modal de confirmación -->
 <form id="adquirirForm" method="POST">
   <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -64,17 +118,21 @@
 </form>
 
 <script>
-  const modal=document.getElementById('confirmModal');
-  const form=document.getElementById('adquirirForm');
-  modal.addEventListener('show.bs.modal',event=>{
-    const btn=event.relatedTarget;
-    const meses=btn.getAttribute('data-meses');
-    const precio=btn.getAttribute('data-precio');
-    const nombre=btn.getAttribute('data-nombre');
-    const id=btn.getAttribute('data-id');
-    document.getElementById('modalText').innerHTML=`¿Deseas adquirir el plan de ${meses} mes${meses>1?'es':''} de <strong>${nombre}</strong> por <span class='text-info'>$${precio} MXN</span>?`;
-    document.getElementById('inputMeses').value=meses;
-    document.getElementById('inputPrecio').value=precio;
-    form.action=`/plataforma/${id}/adquirir`;
+  const modal = document.getElementById('confirmModal');
+  const form = document.getElementById('adquirirForm');
+
+  modal.addEventListener('show.bs.modal', event => {
+    const btn = event.relatedTarget;
+    const meses = btn.getAttribute('data-meses');
+    const precio = btn.getAttribute('data-precio');
+    const nombre = btn.getAttribute('data-nombre');
+    const id = btn.getAttribute('data-id');
+    
+    document.getElementById('modalText').innerHTML = 
+      `¿Deseas adquirir el plan de ${meses} mes${meses>1?'es':''} de <strong>${nombre}</strong> por <span class='text-info'>$${precio} MXN</span>?`;
+    
+    document.getElementById('inputMeses').value = meses;
+    document.getElementById('inputPrecio').value = precio;
+    form.action = \`/plataforma/\${id}/adquirir\`;
   });
 </script>
