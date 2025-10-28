@@ -1,4 +1,4 @@
-// ✅ routes/adminPlatforms.js — versión final con edición de precios, rutas seguras y lista para Render
+// ✅ routes/adminPlatforms.js — versión final con edición de precios, mensajes personalizados y lista para Render
 
 import express from 'express';
 import csrf from 'csurf';
@@ -55,6 +55,12 @@ router.post(
         logoUrl: (logoUrl || '').trim(),
         available: true,
         precios: { 1: 0, 3: 0, 6: 0, 12: 0 },
+        mensajes: {
+          1: 'Gracias por adquirir un plan de 1 mes. Disfruta tu tiempo en nuestra plataforma.',
+          3: 'Tu acceso estará activo durante 3 meses. Aprovéchalo al máximo.',
+          6: 'Plan de 6 meses adquirido. ¡Gracias por tu preferencia!',
+          12: 'Plan anual activado. ¡Disfruta 12 meses de entretenimiento sin interrupciones!',
+        },
       });
 
       res.redirect('/admin/plataformas?ok=Plataforma creada correctamente');
@@ -92,7 +98,7 @@ router.post(
 );
 
 // ==============================
-// 💰 Actualizar precios (1, 3, 6, 12 meses)
+// 💰 Actualizar precios y mensajes personalizados
 // ==============================
 router.post(
   '/admin/plataformas/:id/precios',
@@ -103,6 +109,7 @@ router.post(
     try {
       const { id } = req.params;
 
+      // 💰 Actualizar precios
       const precios = {
         1: parseFloat(req.body.mes1) || 0,
         3: parseFloat(req.body.mes3) || 0,
@@ -110,12 +117,23 @@ router.post(
         12: parseFloat(req.body.mes12) || 0,
       };
 
-      await Platform.updateOne({ _id: id }, { $set: { precios } });
+      // 🧾 Actualizar mensajes personalizados
+      const mensajes = {
+        1: req.body.msg1?.trim() || '',
+        3: req.body.msg3?.trim() || '',
+        6: req.body.msg6?.trim() || '',
+        12: req.body.msg12?.trim() || '',
+      };
 
-      res.redirect('/admin/plataformas?ok=Precios actualizados correctamente');
+      await Platform.updateOne(
+        { _id: id },
+        { $set: { precios, mensajes } }
+      );
+
+      res.redirect('/admin/plataformas?ok=Precios y mensajes actualizados correctamente');
     } catch (err) {
-      console.error('❌ Error al actualizar precios:', err);
-      res.redirect('/admin/plataformas?error=No se pudieron guardar los precios');
+      console.error('❌ Error al actualizar precios o mensajes:', err);
+      res.redirect('/admin/plataformas?error=No se pudieron guardar los cambios');
     }
   }
 );
