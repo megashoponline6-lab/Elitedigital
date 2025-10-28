@@ -46,7 +46,7 @@ app.set('layout', 'layout');
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json()));
+app.use(express.json());
 app.use(cookieParser());
 
 // ✅ Archivos estáticos
