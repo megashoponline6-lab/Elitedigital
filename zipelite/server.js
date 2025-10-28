@@ -1,4 +1,4 @@
-// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas, inactivas y cron automático)
+// ✅ server.js — versión completa (admin panel + saldo + suscripciones activas, inactivas, cron y dashboard admin)
 
 import express from 'express';
 import session from 'express-session';
@@ -231,46 +231,6 @@ app.post(
   }
 );
 
-// 🧑‍💼 Login admin
-app.get('/admin', csrfProtection, (req, res) => {
-  delete req.session.user;
-  res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
-});
-
-app.post(
-  '/admin',
-  csrfProtection,
-  body('usuario').notEmpty(),
-  body('password').notEmpty(),
-  async (req, res) => {
-    try {
-      const { usuario, password } = req.body;
-      const admin = await Admin.findOne({ usuario }).lean();
-      if (!admin) {
-        return res.status(400).render('admin/login', {
-          csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Usuario no encontrado.' }],
-        });
-      }
-      const ok = await bcrypt.compare(password, admin.passhash);
-      if (!ok) {
-        return res.status(400).render('admin/login', {
-          csrfToken: req.csrfToken(),
-          errores: [{ msg: 'Contraseña incorrecta.' }],
-        });
-      }
-      req.session.admin = { id: admin._id.toString(), usuario: admin.usuario };
-      res.redirect('/admin/panel?ok=Bienvenido');
-    } catch (err) {
-      console.error('❌ Error en login admin:', err);
-      res.status(500).render('admin/login', {
-        csrfToken: req.csrfToken(),
-        errores: [{ msg: 'Error interno del servidor.' }],
-      });
-    }
-  }
-);
-
 // 🧩 Rutas de administración
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
@@ -283,7 +243,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
 
     const ahora = new Date();
 
-    // Actualizar suscripciones vencidas del usuario
+    // Actualizar suscripciones vencidas
     const todasSubs = await Subscription.find({ userId: user._id }).lean();
     for (const s of todasSubs) {
       if (s.activa && s.fechaFin && s.fechaFin < ahora) {
@@ -291,7 +251,6 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       }
     }
 
-    // Obtener activas e inactivas
     const subsActivas = await Subscription.find({ userId: user._id, activa: true })
       .populate('platformId')
       .sort({ fechaFin: -1 })
@@ -408,6 +367,70 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
+// 📊 Nuevo Dashboard: Suscripciones (admin)
+app.get('/admin/suscripciones', requireAdmin, async (req, res) => {
+  try {
+    const subs = await Subscription.find({})
+      .populate('userId')
+      .populate('platformId')
+      .sort({ fechaFin: -1 })
+      .lean();
+
+    res.render('admin/suscripciones', { subs, dayjs });
+  } catch (err) {
+    console.error('❌ Error cargando dashboard de suscripciones:', err);
+    res.status(500).send('Error interno del servidor');
+  }
+});
+
+// 💰 Recargar saldo
+app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { correo, monto, nota } = req.body;
+    const user = await User.findOne({ correo: (correo || '').toLowerCase() });
+    if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
+
+    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
+
+    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo} (${nota || 'Recarga manual'})`);
+    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
+  } catch (err) {
+    console.error('❌ Error al recargar saldo:', err);
+    res.redirect('/admin/panel?error=Error al recargar saldo');
+  }
+});
+
+// 🚪 Logout
+app.get(['/logout', '/admin/salir'], (req, res) => {
+  req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada correctamente'));
+});
+
+// ⚠️ Errores
+app.use((req, res) => res.status(404).render('404'));
+app.use((err, req, res, next) => {
+  console.error('❌ Error interno:', err);
+  res.status(500).send('Error Interno del Servidor');
+});
+
+// 🕐 CRON INTERNO — desactivar suscripciones vencidas cada 24h
+setInterval(async () => {
+  const ahora = new Date();
+  try {
+    const vencidas = await Subscription.updateMany(
+      { activa: true, fechaFin: { $lt: ahora } },
+      { $set: { activa: false } }
+    );
+    if (vencidas.modifiedCount > 0) {
+      console.log(`🕐 Cron: ${vencidas.modifiedCount} suscripciones vencidas desactivadas automáticamente.`);
+    }
+  } catch (err) {
+    console.error('❌ Error en el cron de suscripciones:', err);
+  }
+}, 1000 * 60 * 60 * 24); // cada 24 horas
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
 // 💰 Recargar saldo
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
