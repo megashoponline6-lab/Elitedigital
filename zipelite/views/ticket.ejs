@@ -1,4 +1,4 @@
-<div class="ticket-container" style="max-width:600px;margin:40px auto;padding:25px;border-radius:20px;background:#fff;box-shadow:0 0 15px rgba(0,0,0,0.15);font-family:'Segoe UI',sans-serif;">
+<div id="ticket" style="max-width:650px;margin:40px auto;padding:25px;border-radius:20px;background:#fff;box-shadow:0 0 15px rgba(0,0,0,0.15);font-family:'Segoe UI',sans-serif;min-height:100vh;overflow:auto;">
   <div style="text-align:center;">
     <% if (plataforma.logoUrl) { %>
       <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:70px;margin-bottom:10px;">
@@ -34,8 +34,12 @@
     <p><strong>Fecha de fin:</strong> <%= dayjs(suscripcion.fechaFin).format('DD/MM/YYYY') %></p>
   </div>
 
-  <div style="text-align:center;margin-top:25px;">
-    <button onclick="window.print()" style="padding:10px 20px;border:none;border-radius:10px;background:#e50914;color:#fff;cursor:pointer;font-weight:600;">
+  <div style="text-align:center;margin-top:30px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
+    <button onclick="window.location.href='/panel'" style="padding:10px 20px;border:none;border-radius:10px;background:#333;color:#fff;cursor:pointer;font-weight:600;">
+      ⬅️ Volver al Panel
+    </button>
+
+    <button id="btnPDF" style="padding:10px 20px;border:none;border-radius:10px;background:#e50914;color:#fff;cursor:pointer;font-weight:600;">
       📄 Descargar Ticket (PDF)
     </button>
   </div>
@@ -45,6 +49,9 @@
   </div>
 </div>
 
+<!-- ✅ Librería para generar PDF desde el navegador -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
 function copiar(id) {
   const texto = document.getElementById(id).innerText.trim();
@@ -52,4 +59,21 @@ function copiar(id) {
     alert('Copiado: ' + texto);
   });
 }
+
+// 📄 Generar PDF real con nombre dinámico
+document.getElementById('btnPDF').addEventListener('click', () => {
+  const ticket = document.getElementById('ticket');
+  const fecha = new Date().toISOString().slice(0, 10);
+  const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
+
+  const opciones = {
+    margin: 0.5,
+    filename: nombreArchivo,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().from(ticket).set(opciones).save();
+});
 </script>
