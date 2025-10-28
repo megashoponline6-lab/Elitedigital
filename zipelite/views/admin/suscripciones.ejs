@@ -1,0 +1,239 @@
+<% layout = 'admin/layout' %>
+<% var title = 'Dashboard de Suscripciones'; %>
+
+<style>
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+
+  h2 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
+  }
+
+  .neon-box {
+    background: rgba(20, 20, 30, 0.85);
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3), 0 0 30px rgba(0, 150, 255, 0.2);
+    border-radius: 1rem;
+    padding: 1.5rem;
+  }
+
+  .table-neon {
+    width: 100%;
+    background: rgba(15, 15, 25, 0.7);
+    border-collapse: collapse;
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+
+  .table-neon th {
+    color: #00eaff;
+    text-shadow: 0 0 10px #00eaff;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .table-neon td {
+    color: #eee;
+    padding: 0.75rem;
+    text-align: center;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .table-neon tr:hover {
+    background: rgba(255, 0, 80, 0.15);
+  }
+
+  .badge {
+    padding: 0.4em 0.8em;
+    border-radius: 0.5em;
+    font-weight: 600;
+  }
+
+  .bg-success { background: #00ff7f; color: #000; }
+  .bg-danger { background: #ff003c; color: #fff; }
+
+  .platform-logo {
+    height: 40px;
+    border-radius: 6px;
+  }
+
+  .user-email {
+    color: #00eaff;
+  }
+
+  .btn-neon {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    border: none;
+    color: #fff;
+    padding: 0.6rem 1.2rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+    transition: transform 0.2s, box-shadow 0.3s;
+  }
+
+  .btn-neon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 60, 0.6);
+  }
+
+  /* 🔍 Barra de búsqueda */
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .search-input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0.5rem;
+    color: #fff;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+  }
+
+  .search-input:focus {
+    outline: none;
+    border-color: #ff003c;
+    box-shadow: 0 0 10px #ff003c;
+  }
+
+  .contador {
+    font-size: 0.95rem;
+    color: #aaa;
+  }
+
+  .toggle-btn {
+    background: rgba(0, 255, 255, 0.2);
+    border: 1px solid #00eaff;
+    color: #00eaff;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+
+  .toggle-btn:hover {
+    background: rgba(0, 255, 255, 0.4);
+    box-shadow: 0 0 15px #00eaff;
+  }
+</style>
+
+<div class="container mt-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+    <h2 class="fw-bold mb-3 mb-md-0">📊 Suscripciones registradas</h2>
+    <a href="/admin/panel" class="btn-neon">⬅ Volver al Panel</a>
+  </div>
+
+  <!-- 🔍 Barra de búsqueda + controles -->
+  <div class="search-bar">
+    <input
+      type="text"
+      id="buscador"
+      class="search-input"
+      placeholder="Buscar por usuario, correo o plataforma..."
+    />
+    <button id="toggleVencidas" class="toggle-btn">Mostrar vencidas</button>
+    <span id="contador" class="contador">Mostrando <%= subs.filter(s => s.activa).length %> de <%= subs.length %></span>
+  </div>
+
+  <div class="neon-box">
+    <% if (subs && subs.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table-neon" id="tablaSubs">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Usuario</th>
+              <th>Correo</th>
+              <th>Plataforma</th>
+              <th>Duración</th>
+              <th>Precio</th>
+              <th>Inicio</th>
+              <th>Fin</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% subs.forEach((s, i) => { %>
+              <tr class="<%= s.activa ? 'activa' : 'vencida' %>">
+                <td><%= i + 1 %></td>
+                <td><%= s.userId ? (s.userId.nombre + ' ' + (s.userId.apellido || '')) : 'N/A' %></td>
+                <td><small class="user-email"><%= s.userId ? s.userId.correo : 'N/A' %></small></td>
+                <td>
+                  <% if (s.platformId && s.platformId.logoUrl) { %>
+                    <img src="<%= s.platformId.logoUrl %>" alt="<%= s.platformId.name %>" class="platform-logo"><br>
+                  <% } %>
+                  <%= s.platformId ? s.platformId.name : 'N/A' %>
+                </td>
+                <td><%= s.meses %> mes<%= s.meses > 1 ? 'es' : '' %></td>
+                <td>$<%= s.precio %> MXN</td>
+                <td><%= dayjs(s.fechaInicio).format('DD/MM/YYYY') %></td>
+                <td><%= dayjs(s.fechaFin).format('DD/MM/YYYY') %></td>
+                <td>
+                  <% if (s.activa) { %>
+                    <span class="badge bg-success">Activa</span>
+                  <% } else { %>
+                    <span class="badge bg-danger">Vencida</span>
+                  <% } %>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-center text-secondary mt-3">No hay suscripciones registradas aún.</p>
+    <% } %>
+  </div>
+</div>
+
+<script>
+  const buscador = document.getElementById('buscador');
+  const filas = document.querySelectorAll('#tablaSubs tbody tr');
+  const contador = document.getElementById('contador');
+  const total = filas.length;
+  const toggleBtn = document.getElementById('toggleVencidas');
+  let mostrarVencidas = false;
+
+  // Al cargar: ocultar las vencidas
+  filas.forEach(f => {
+    if (f.classList.contains('vencida')) f.style.display = 'none';
+  });
+
+  function actualizarContador() {
+    const visibles = Array.from(filas).filter(f => f.style.display !== 'none').length;
+    contador.textContent = `Mostrando ${visibles} de ${total}`;
+  }
+
+  buscador.addEventListener('keyup', () => {
+    const texto = buscador.value.toLowerCase();
+    filas.forEach(fila => {
+      const contenido = fila.textContent.toLowerCase();
+      const coincide = contenido.includes(texto);
+      const esVencida = fila.classList.contains('vencida');
+      fila.style.display = coincide && (mostrarVencidas || !esVencida) ? '' : 'none';
+    });
+    actualizarContador();
+  });
+
+  toggleBtn.addEventListener('click', () => {
+    mostrarVencidas = !mostrarVencidas;
+    toggleBtn.textContent = mostrarVencidas ? 'Ocultar vencidas' : 'Mostrar vencidas';
+    filas.forEach(f => {
+      const esVencida = f.classList.contains('vencida');
+      if (esVencida) f.style.display = mostrarVencidas ? '' : 'none';
+    });
+    actualizarContador();
+  });
+
+  actualizarContador();
+</script>
