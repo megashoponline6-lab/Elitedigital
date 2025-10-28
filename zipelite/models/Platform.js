@@ -1,4 +1,4 @@
-// ✅ models/Platform.js — versión final con gestión de precios mensuales lista para Render
+// ✅ models/Platform.js — versión final con mensajes personalizados por duración y lista para Render
 
 import mongoose from 'mongoose';
 
@@ -38,6 +38,26 @@ const PlatformSchema = new mongoose.Schema(
     precioBase: {
       type: Number,
       default: 0,
+    },
+
+    // 🧾 Mensajes personalizados por duración (uno por cada tipo de plan)
+    mensajes: {
+      1: {
+        type: String,
+        default: 'Gracias por adquirir un plan de 1 mes. Disfruta tu tiempo en nuestra plataforma.',
+      },
+      3: {
+        type: String,
+        default: 'Tu acceso estará activo durante 3 meses. Aprovéchalo al máximo.',
+      },
+      6: {
+        type: String,
+        default: 'Plan de 6 meses adquirido. ¡Gracias por tu preferencia!',
+      },
+      12: {
+        type: String,
+        default: 'Plan anual activado. ¡Disfruta 12 meses de entretenimiento sin interrupciones!',
+      },
     },
   },
   {
