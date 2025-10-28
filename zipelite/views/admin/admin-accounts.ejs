@@ -20,10 +20,10 @@
           <!-- Plataforma -->
           <div class="col-md-3">
             <label class="form-label">Plataforma</label>
-            <select name="platform" class="form-select bg-dark text-light border-secondary" required>
+            <select name="plataformaId" class="form-select bg-dark text-light border-secondary" required>
               <option value="">Seleccionar...</option>
               <% platforms.forEach(p => { %>
-                <option value="<%= p._id %>" <%= filters.platformId == p._id ? 'selected' : '' %>>
+                <option value="<%= p._id %>" <%= filters.plataformaId == p._id ? 'selected' : '' %>>
                   <%= p.name || p.nombre %>
                 </option>
               <% }) %>
@@ -35,7 +35,7 @@
             <label class="form-label">Correo</label>
             <input
               type="email"
-              name="email"
+              name="correo"
               class="form-control bg-dark text-light border-secondary"
               placeholder="correo@ejemplo.com"
               required
@@ -59,7 +59,7 @@
             <label class="form-label">Cupos</label>
             <input
               type="number"
-              name="slots"
+              name="cupos"
               min="1"
               value="1"
               class="form-control bg-dark text-light border-secondary"
@@ -88,13 +88,13 @@
       <!-- FILTROS -->
       <form method="get" action="/admin/cuentas" class="d-flex align-items-center gap-2">
         <select
-          name="platform"
+          name="plataformaId"
           class="form-select bg-dark text-light border-secondary"
           onchange="this.form.submit()"
         >
           <option value="all">Todas las plataformas</option>
           <% platforms.forEach(p => { %>
-            <option value="<%= p._id %>" <%= filters.platformId == p._id ? 'selected' : '' %>>
+            <option value="<%= p._id %>" <%= filters.plataformaId == p._id ? 'selected' : '' %>>
               <%= p.name || p.nombre %>
             </option>
           <% }) %>
@@ -136,10 +136,10 @@
               <% accounts.forEach(acc => { %>
                 <tr>
                   <!-- Plataforma -->
-                  <td><%= acc.platform ? (acc.platform.name || acc.platform.nombre) : 'Sin plataforma' %></td>
+                  <td><%= acc.plataformaId ? (acc.plataformaId.name || acc.plataformaId.nombre) : 'Sin plataforma' %></td>
 
                   <!-- Correo -->
-                  <td><%= acc.email %></td>
+                  <td><%= acc.correo %></td>
 
                   <!-- Contraseña con toggle -->
                   <td>
@@ -154,11 +154,11 @@
                   </td>
 
                   <!-- Cupos -->
-                  <td><%= acc.slots %></td>
+                  <td><%= acc.cupos %></td>
 
                   <!-- Estado -->
                   <td>
-                    <% if (acc.active) { %>
+                    <% if (acc.activa) { %>
                       <span class="badge bg-success">Activa</span>
                     <% } else { %>
                       <span class="badge bg-secondary">Inactiva</span>
@@ -173,13 +173,12 @@
                       method="POST"
                       class="d-inline"
                     >
-                      <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
-                      <input type="hidden" name="active" value="<%= !acc.active %>" />
+                      <input type="hidden" name="activa" value="<%= !acc.activa %>" />
                       <button
-                        class="btn btn-sm <%= acc.active ? 'btn-secondary' : 'btn-success' %>"
+                        class="btn btn-sm <%= acc.activa ? 'btn-secondary' : 'btn-success' %>"
                       >
-                        <%= acc.active ? 'Desactivar' : 'Activar' %>
+                        <%= acc.activa ? 'Desactivar' : 'Activar' %>
                       </button>
                     </form>
 
@@ -189,7 +188,6 @@
                       method="POST"
                       class="d-inline"
                     >
-                      <!-- ✅ Token CSRF -->
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>" />
                       <button
                         class="btn btn-sm btn-danger"
