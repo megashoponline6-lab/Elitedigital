@@ -1,4 +1,4 @@
-// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas e inactivas)
+// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas, inactivas y cron automático)
 
 import express from 'express';
 import session from 'express-session';
@@ -21,7 +21,7 @@ import User from './models/User.js';
 import Admin from './models/Admin.js';
 import Account from './models/Account.js';
 import Platform from './models/Platform.js';
-import Subscription from './models/Subscription.js'; // 🆕 modelo de suscripciones
+import Subscription from './models/Subscription.js';
 
 import adminAccountsRoutes from './routes/adminAccounts.js';
 import adminPlatformsRoutes from './routes/adminPlatforms.js';
@@ -275,7 +275,7 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario — con suscripciones activas + historial
+// 👤 Panel usuario
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
@@ -283,7 +283,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
 
     const ahora = new Date();
 
-    // Buscar y actualizar suscripciones vencidas
+    // Actualizar suscripciones vencidas del usuario
     const todasSubs = await Subscription.find({ userId: user._id }).lean();
     for (const s of todasSubs) {
       if (s.activa && s.fechaFin && s.fechaFin < ahora) {
@@ -344,7 +344,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 💳 Adquirir plan — registra suscripción
+// 💳 Adquirir plan
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -362,7 +362,6 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     user.saldo -= costo;
     await user.save();
 
-    // Crear suscripción
     const fechaInicio = new Date();
     const fechaFin = new Date();
     fechaFin.setMonth(fechaFin.getMonth() + mesesInt);
@@ -438,6 +437,22 @@ app.use((err, req, res, next) => {
   console.error('❌ Error interno:', err);
   res.status(500).send('Error Interno del Servidor');
 });
+
+// 🕐 CRON INTERNO — desactivar suscripciones vencidas cada 24h
+setInterval(async () => {
+  const ahora = new Date();
+  try {
+    const vencidas = await Subscription.updateMany(
+      { activa: true, fechaFin: { $lt: ahora } },
+      { $set: { activa: false } }
+    );
+    if (vencidas.modifiedCount > 0) {
+      console.log(`🕐 Cron: ${vencidas.modifiedCount} suscripciones vencidas desactivadas automáticamente.`);
+    }
+  } catch (err) {
+    console.error('❌ Error en el cron de suscripciones:', err);
+  }
+}, 1000 * 60 * 60 * 24); // cada 24 horas
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
