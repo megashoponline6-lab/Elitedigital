@@ -466,9 +466,9 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
-// 🎟️ Ticket de compra (ver/descargar las veces que quiera)
+// 🎟️ Ticket de compra (cliente o admin pueden visualizarlo)
 // ───────────────────────────────────────────────────────────────────────────────
-app.get('/ticket/:id', requireAuth, async (req, res) => {
+app.get('/ticket/:id', async (req, res) => {
   try {
     const suscripcion = await Subscription.findById(req.params.id)
       .populate('platformId')
@@ -476,15 +476,17 @@ app.get('/ticket/:id', requireAuth, async (req, res) => {
 
     if (!suscripcion) return res.status(404).render('404');
 
-    // Restringir a dueño de la suscripción
+    // 🔐 Validación: permitir si es el cliente dueño o si es un admin logueado
     const userId = req.session.user?.id?.toString();
-    if (suscripcion.userId?.toString() !== userId) {
+    const isOwner = suscripcion.userId?.toString() === userId;
+    const isAdmin = !!req.session.admin;
+
+    if (!isOwner && !isAdmin) {
       return res.status(403).render('404');
     }
 
-    const plataforma =
-      suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
-
+    // 🧾 Mostrar ticket
+    const plataforma = suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
     const dur = String(suscripcion.meses);
     const mensaje =
       (plataforma?.mensajes && (plataforma.mensajes[dur] || plataforma.mensajes[suscripcion.meses])) ||
@@ -492,18 +494,13 @@ app.get('/ticket/:id', requireAuth, async (req, res) => {
       plataforma?.[`mensaje_${suscripcion.meses}`] ||
       'Gracias por tu compra.';
 
-    // Render de la vista ticket (con botones copiar y descargar)
-    return res.render('ticket', {
-      suscripcion,
-      plataforma,
-      mensaje,
-      dayjs,
-    });
+    res.render('ticket', { suscripcion, plataforma, mensaje, dayjs });
   } catch (err) {
     console.error('❌ Error mostrando ticket:', err);
-    return res.status(500).send('Error interno del servidor');
+    res.status(500).send('Error interno del servidor');
   }
 });
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // 🧮 Panel admin (dashboard simple con stats)
