@@ -1,25 +1,24 @@
-// ✅ controllers/adminAccountsController.js — versión final Mongo puro (sin liberar cupos automáticamente)
-
+// ✅ controllers/adminAccountsController.js — versión final (Mongo puro, sin liberar cupos automáticamente)
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 
 /**
- * 📄 Vista principal — mostrar todas las cuentas
+ * 📄 Vista principal — mostrar todas las cuentas registradas
  */
 export const view = async (req, res) => {
   try {
     const platforms = await Platform.find({}).sort({ name: 1 }).lean();
 
-    const { platform: platformId, q } = req.query;
+    const { plataformaId, q } = req.query;
     const filter = {};
-    if (platformId && platformId !== 'all') filter.platform = platformId;
+    if (plataformaId && plataformaId !== 'all') filter.plataformaId = plataformaId;
     if (q && q.trim()) {
       const regex = new RegExp(q.trim(), 'i');
-      filter.$or = [{ email: regex }];
+      filter.$or = [{ correo: regex }];
     }
 
     const accounts = await Account.find(filter)
-      .populate('platform', 'name')
+      .populate('plataformaId', 'name')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -27,9 +26,9 @@ export const view = async (req, res) => {
       title: 'Gestión de Cuentas',
       platforms,
       accounts,
-      filters: { platformId: platformId || 'all', q: q || '' },
+      filters: { plataformaId: plataformaId || 'all', q: q || '' },
       csrfToken: req.csrfToken(),
-      errores: []
+      errores: [],
     });
   } catch (err) {
     console.error('❌ Error al mostrar gestión de cuentas:', err);
@@ -37,32 +36,32 @@ export const view = async (req, res) => {
       title: 'Gestión de Cuentas',
       platforms: [],
       accounts: [],
-      filters: { platformId: 'all', q: '' },
+      filters: { plataformaId: 'all', q: '' },
       csrfToken: req.csrfToken ? req.csrfToken() : '',
-      errores: [{ msg: 'Error interno al cargar cuentas.' }]
+      errores: [{ msg: 'Error interno al cargar cuentas.' }],
     });
   }
 };
 
 /**
- * ➕ Crear una nueva cuenta
+ * ➕ Crear una nueva cuenta compartida
  */
 export const create = async (req, res) => {
   try {
-    const { platform, email, password, slots } = req.body;
-    if (!platform || !email || !password || !slots) {
+    const { plataformaId, correo, password, cupos } = req.body;
+    if (!plataformaId || !correo || !password || !cupos) {
       return res.redirect('/admin/cuentas?error=Faltan campos obligatorios');
     }
 
     await Account.create({
-      platform,
-      email: email.trim().toLowerCase(),
-      password,
-      slots: Number(slots),
-      active: true
+      plataformaId,
+      correo: correo.trim().toLowerCase(),
+      password: password.trim(),
+      cupos: Number(cupos),
+      activa: true,
     });
 
-    console.log(`✅ Cuenta creada: ${email}`);
+    console.log(`✅ Cuenta creada: ${correo}`);
     res.redirect('/admin/cuentas?ok=Cuenta creada correctamente');
   } catch (err) {
     console.error('❌ Error al crear cuenta:', err);
@@ -76,22 +75,22 @@ export const create = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, password, slots, active } = req.body;
+    const { correo, password, cupos, activa } = req.body;
 
     const updated = await Account.findByIdAndUpdate(id, {
-      ...(email ? { email: email.trim().toLowerCase() } : {}),
-      ...(password ? { password } : {}),
-      ...(slots ? { slots: Number(slots) } : {}),
-      active: active === 'true' || active === true
+      ...(correo ? { correo: correo.trim().toLowerCase() } : {}),
+      ...(password ? { password: password.trim() } : {}),
+      ...(cupos ? { cupos: Number(cupos) } : {}),
+      activa: activa === 'true' || activa === true,
     });
 
     if (!updated) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
 
-    console.log(`🟡 Cuenta actualizada: ${id}`);
-    res.redirect('/admin/cuentas?ok=Cuenta actualizada');
+    console.log(`🟡 Cuenta actualizada: ${correo || id}`);
+    res.redirect('/admin/cuentas?ok=Cuenta actualizada correctamente');
   } catch (err) {
     console.error('❌ Error al actualizar cuenta:', err);
-    res.redirect('/admin/cuentas?error=Error al actualizar');
+    res.redirect('/admin/cuentas?error=Error al actualizar cuenta');
   }
 };
 
@@ -114,15 +113,15 @@ export const remove = async (req, res) => {
 
 /**
  * 🎲 Seleccionar cuenta(s) aleatoria(s) al comprar — y descontar cupos
- * No libera cupos automáticamente cuando vence la suscripción.
+ * ⚠️ No libera cupos automáticamente cuando vence la suscripción.
  */
-export const pickRandomAccounts = async (platformId, count = 1) => {
+export const pickRandomAccounts = async (plataformaId, count = 1) => {
   try {
-    // Solo busca cuentas activas con cupos disponibles
+    // Buscar cuentas activas con cupos disponibles
     const pool = await Account.find({
-      platform: platformId,
-      active: true,
-      slots: { $gt: 0 }
+      plataformaId,
+      activa: true,
+      cupos: { $gt: 0 },
     }).lean();
 
     if (!pool.length) return [];
@@ -133,13 +132,13 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
 
-    // Seleccionar las cuentas necesarias (según el número de cupos solicitados)
+    // Seleccionar las cuentas necesarias (según el número solicitado)
     const selected = pool.slice(0, Math.min(count, pool.length));
 
     // Descontar cupos inmediatamente
     await Promise.all(
       selected.map(acc =>
-        Account.updateOne({ _id: acc._id, slots: { $gt: 0 } }, { $inc: { slots: -1 } })
+        Account.updateOne({ _id: acc._id, cupos: { $gt: 0 } }, { $inc: { cupos: -1 } })
       )
     );
 
