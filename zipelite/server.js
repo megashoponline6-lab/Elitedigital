@@ -1,4 +1,4 @@
-// ✅ server.js — versión final completa y funcional (admin panel fijo + recargar saldo + rutas de plataformas)
+// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas)
 
 import express from 'express';
 import session from 'express-session';
@@ -21,6 +21,7 @@ import User from './models/User.js';
 import Admin from './models/Admin.js';
 import Account from './models/Account.js';
 import Platform from './models/Platform.js';
+import Subscription from './models/Subscription.js'; // 🆕 modelo de suscripciones
 
 import adminAccountsRoutes from './routes/adminAccounts.js';
 import adminPlatformsRoutes from './routes/adminPlatforms.js';
@@ -274,11 +275,17 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario (catálogo integrado con precios reales)
+// 👤 Panel usuario — ahora con suscripciones activas
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
+
+    // 🧾 Traer suscripciones activas del usuario
+    const subs = await Subscription.find({ userId: user._id, activa: true })
+      .populate('platformId')
+      .sort({ fechaFin: -1 })
+      .lean();
 
     const productos = platforms.map((p) => ({
       _id: p._id,
@@ -286,8 +293,6 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       logo: p.logoUrl,
       precios: p.precios || {},
     }));
-
-    const subs = [];
 
     res.render('panel', {
       csrfToken: req.csrfToken(),
@@ -323,7 +328,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 💳 Adquirir plan
+// 💳 Adquirir plan — ahora registra suscripción
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -333,11 +338,27 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     const mesesInt = parseInt(meses);
 
     if (!plataforma || !user) return res.redirect('/panel?error=Datos inválidos');
-    if (Number.isNaN(costo) || Number.isNaN(mesesInt)) return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
-    if (user.saldo < costo) return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
+    if (Number.isNaN(costo) || Number.isNaN(mesesInt))
+      return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
+    if (user.saldo < costo)
+      return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
 
     user.saldo -= costo;
     await user.save();
+
+    // 🧾 Guardar suscripción en la base de datos
+    const fechaInicio = new Date();
+    const fechaFin = new Date();
+    fechaFin.setMonth(fechaFin.getMonth() + mesesInt);
+
+    await Subscription.create({
+      userId: user._id,
+      platformId: plataforma._id,
+      meses: mesesInt,
+      precio: costo,
+      fechaInicio,
+      fechaFin,
+    });
 
     res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
   } catch (err) {
