@@ -274,7 +274,7 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario (catálogo integrado)
+// 👤 Panel usuario (catálogo integrado con precios reales)
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
@@ -284,9 +284,9 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       _id: p._id,
       nombre: p.name,
       logo: p.logoUrl,
+      precios: p.precios || {},
     }));
 
-    // 🔧 subs inicializado vacío para evitar ReferenceError en EJS
     const subs = [];
 
     res.render('panel', {
@@ -303,17 +303,18 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 🎬 Detalle de plataforma (planes)
+// 🎬 Detalle de plataforma (planes reales)
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
     const plataforma = await Platform.findById(req.params.id).lean();
     if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
-    const precios = [];
-    for (let i = 1; i <= 12; i++) {
-      const precio = (plataforma.precioBase || 30) * i;
-      precios.push({ meses: i, precio });
-    }
+    const precios = [
+      { meses: 1, precio: plataforma.precios?.[1] || 0 },
+      { meses: 3, precio: plataforma.precios?.[3] || 0 },
+      { meses: 6, precio: plataforma.precios?.[6] || 0 },
+      { meses: 12, precio: plataforma.precios?.[12] || 0 },
+    ];
 
     res.render('plataforma', { plataforma, precios });
   } catch (err) {
