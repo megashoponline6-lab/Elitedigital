@@ -54,18 +54,27 @@
 
 <div class="container text-center mt-5">
   <% 
-    // ✅ Detección inteligente del logo (corrige /plataforma/img/... → /img/...)
-    let logoPath = '/img/default.png'; // Fallback opcional
+    // ✅ Detección robusta del logo (corrige rutas duplicadas y antiguas)
+    let logoPath = '/img/default.png'; // fallback
 
     if (plataforma.logoUrl) {
-      if (plataforma.logoUrl.includes('uploads')) {
-        logoPath = plataforma.logoUrl.startsWith('/') ? plataforma.logoUrl : '/' + plataforma.logoUrl;
-      } else if (plataforma.logoUrl.includes('/plataforma/img/')) {
-        logoPath = plataforma.logoUrl.replace('/plataforma', '');
-      } else if (plataforma.logoUrl.includes('/img/')) {
-        logoPath = plataforma.logoUrl;
-      } else {
-        logoPath = '/img/plataformas/' + plataforma.logoUrl;
+      let url = plataforma.logoUrl.trim();
+
+      // si ya contiene 'img/plataformas/', no añadimos nada
+      if (url.includes('img/plataformas/')) {
+        logoPath = url.startsWith('/') ? url : '/' + url;
+      }
+      // si viene con /plataforma/img/, la corregimos
+      else if (url.includes('/plataforma/img/')) {
+        logoPath = url.replace('/plataforma', '');
+      }
+      // si viene de uploads
+      else if (url.includes('uploads')) {
+        logoPath = url.startsWith('/') ? url : '/' + url;
+      }
+      // si solo tiene nombre de archivo
+      else {
+        logoPath = '/img/plataformas/' + url;
       }
     } else if (plataforma.logo && plataforma.logo.includes('uploads')) {
       logoPath = '/' + plataforma.logo;
