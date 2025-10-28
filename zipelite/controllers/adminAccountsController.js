@@ -1,7 +1,11 @@
-// ✅ controllers/adminAccountsController.js — Mongo puro
+// ✅ controllers/adminAccountsController.js — versión final Mongo puro (sin liberar cupos automáticamente)
+
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 
+/**
+ * 📄 Vista principal — mostrar todas las cuentas
+ */
 export const view = async (req, res) => {
   try {
     const platforms = await Platform.find({}).sort({ name: 1 }).lean();
@@ -40,6 +44,9 @@ export const view = async (req, res) => {
   }
 };
 
+/**
+ * ➕ Crear una nueva cuenta
+ */
 export const create = async (req, res) => {
   try {
     const { platform, email, password, slots } = req.body;
@@ -63,6 +70,9 @@ export const create = async (req, res) => {
   }
 };
 
+/**
+ * ✏️ Actualizar una cuenta existente
+ */
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
@@ -85,6 +95,9 @@ export const update = async (req, res) => {
   }
 };
 
+/**
+ * 🗑️ Eliminar una cuenta
+ */
 export const remove = async (req, res) => {
   try {
     const { id } = req.params;
@@ -99,8 +112,13 @@ export const remove = async (req, res) => {
   }
 };
 
+/**
+ * 🎲 Seleccionar cuenta(s) aleatoria(s) al comprar — y descontar cupos
+ * No libera cupos automáticamente cuando vence la suscripción.
+ */
 export const pickRandomAccounts = async (platformId, count = 1) => {
   try {
+    // Solo busca cuentas activas con cupos disponibles
     const pool = await Account.find({
       platform: platformId,
       active: true,
@@ -109,13 +127,16 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
 
     if (!pool.length) return [];
 
+    // Mezclar aleatoriamente (Fisher–Yates)
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
 
+    // Seleccionar las cuentas necesarias (según el número de cupos solicitados)
     const selected = pool.slice(0, Math.min(count, pool.length));
 
+    // Descontar cupos inmediatamente
     await Promise.all(
       selected.map(acc =>
         Account.updateOne({ _id: acc._id, slots: { $gt: 0 } }, { $inc: { slots: -1 } })
@@ -124,7 +145,8 @@ export const pickRandomAccounts = async (platformId, count = 1) => {
 
     console.log(`🎟️ ${selected.length} cuenta(s) asignada(s) aleatoriamente`);
     return selected;
-  } catch {
+  } catch (err) {
+    console.error('❌ Error al asignar cuenta aleatoria:', err);
     return [];
   }
 };
