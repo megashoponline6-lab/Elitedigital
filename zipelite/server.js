@@ -1,4 +1,5 @@
-// ✅ server.js — versión completa (admin panel + saldo + suscripciones + cupos automáticos + TICKET)
+// ✅ server.js — versión larga FINAL (rotación ordenada + ticket + admin + cron)
+// ⚠️ Esta es la PARTE 1 de 2. Pega esta parte primero y luego la PARTE 2 en el mismo archivo.
 
 import express from 'express';
 import session from 'express-session';
@@ -31,29 +32,39 @@ dotenv.config();
 const app = express();
 app.set('trust proxy', 1);
 
-// 📁 Carpetas necesarias
+// ───────────────────────────────────────────────────────────────────────────────
+// 📁 Archivos / uploads
+// ───────────────────────────────────────────────────────────────────────────────
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-const upload = multer({ dest: UPLOADS_DIR });
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+const upload = multer({ dest: UPLOADS_DIR }); // (se usa en rutas admin para logos, si aplica)
 
-// ⚙️ Motor de vistas
+// ───────────────────────────────────────────────────────────────────────────────
+// ⚙️ Vistas EJS + Layouts
+// ───────────────────────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
-// 🛡️ Seguridad y middlewares
+// ───────────────────────────────────────────────────────────────────────────────
+// 🛡️ Seguridad y middlewares generales
+// ───────────────────────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser());
 
-// ✅ Archivos estáticos
+// ───────────────────────────────────────────────────────────────────────────────
+// 📦 Estáticos
+// ───────────────────────────────────────────────────────────────────────────────
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use('/public', express.static(path.join(process.cwd(), 'public')));
 
-// 🔄 Redirección de imágenes antiguas
+// Compat para rutas antiguas de imágenes subidas en /public/uploads -> /img/plataformas
 app.get('/public/uploads/:file', (req, res) => {
   const fileName = req.params.file;
   const baseDir = path.join(process.cwd(), 'public', 'img', 'plataformas');
@@ -61,10 +72,12 @@ app.get('/public/uploads/:file', (req, res) => {
   let finalPath = path.join(baseDir, fileName);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${fileName}`);
 
+  // si viene con prefijo numérico, lo limpiamos
   const cleanName = fileName.replace(/^\d+-/, '');
   finalPath = path.join(baseDir, cleanName);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${cleanName}`);
 
+  // intentamos svg alterno
   const svgAlt = cleanName.replace(/\.png$/i, '.svg');
   finalPath = path.join(baseDir, svgAlt);
   if (fs.existsSync(finalPath)) return res.redirect(`/img/plataformas/${svgAlt}`);
@@ -73,7 +86,9 @@ app.get('/public/uploads/:file', (req, res) => {
   res.status(404).send('Imagen no encontrada');
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
 // 💾 Conexión MongoDB
+// ───────────────────────────────────────────────────────────────────────────────
 if (process.env.MONGODB_URI) {
   try {
     await mongoose.connect(process.env.MONGODB_URI);
@@ -85,7 +100,9 @@ if (process.env.MONGODB_URI) {
   console.warn('⚠️ No se encontró MONGODB_URI en las variables de entorno');
 }
 
-// 🧠 Sesión persistente con MongoDB
+// ───────────────────────────────────────────────────────────────────────────────
+// 🧠 Sesiones (persistentes en Mongo)
+// ───────────────────────────────────────────────────────────────────────────────
 app.use(
   session({
     secret: process.env.SESSION_SECRET || 'clave-insegura',
@@ -95,13 +112,20 @@ app.use(
       mongoUrl: process.env.MONGODB_URI,
       collectionName: 'sessions',
     }),
-    cookie: { maxAge: 1000 * 60 * 60 * 24 * 7 },
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 días
+      sameSite: 'lax',
+      secure: false, // Render suele poner proxy TLS; si necesitas cookie secure, cambia a true
+    },
   })
 );
 
+// CSRF
 const csrfProtection = csrf({ cookie: true });
 
-// 🧩 Middlewares de autenticación
+// ───────────────────────────────────────────────────────────────────────────────
+// 🔐 Auth middlewares
+// ───────────────────────────────────────────────────────────────────────────────
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect('/login');
   next();
@@ -113,19 +137,29 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-// 🌍 Variables globales
+// ───────────────────────────────────────────────────────────────────────────────
+// 🌍 Variables globales de la app (disponibles en las vistas EJS)
+// ───────────────────────────────────────────────────────────────────────────────
 app.locals.appName = process.env.APP_NAME || 'Eliteflix';
 app.locals.dayjs = dayjs;
 
-// 🧑‍💻 Crear admin por defecto si no existe
-const adminExists = await Admin.findOne({ usuario: 'ml3838761@gmail.com' }).lean();
-if (!adminExists) {
-  const passhash = await bcrypt.hash('07141512', 12);
-  await Admin.create({ usuario: 'ml3838761@gmail.com', passhash });
-  console.log('✅ Admin por defecto creado: ml3838761@gmail.com / 07141512');
+// ───────────────────────────────────────────────────────────────────────────────
+// 👤 Admin por defecto
+// ───────────────────────────────────────────────────────────────────────────────
+try {
+  const adminExists = await Admin.findOne({ usuario: 'ml3838761@gmail.com' }).lean();
+  if (!adminExists) {
+    const passhash = await bcrypt.hash('07141512', 12);
+    await Admin.create({ usuario: 'ml3838761@gmail.com', passhash });
+    console.log('✅ Admin por defecto creado: ml3838761@gmail.com / 07141512');
+  }
+} catch (e) {
+  console.error('❌ Error verificando/creando admin por defecto:', e);
 }
 
-// 🧭 Vars globales para layout
+// ───────────────────────────────────────────────────────────────────────────────
+// 🧭 Locals por request (flash query params etc.)
+// ───────────────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.locals.sess = req.session;
   res.locals.ok = req.query.ok;
@@ -133,15 +167,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Inicio
+// ───────────────────────────────────────────────────────────────────────────────
+// 🏠 Home
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   res.render('home', { productos: [], etiquetas: [], filtro: '' });
 });
 
-// 🧍 Registro
-app.get('/registro', csrfProtection, (req, res) =>
-  res.render('registro', { csrfToken: req.csrfToken(), errores: [] })
-);
+// ───────────────────────────────────────────────────────────────────────────────
+// 👤 Registro de usuarios
+// ───────────────────────────────────────────────────────────────────────────────
+app.get('/registro', csrfProtection, (req, res) => {
+  res.render('registro', { csrfToken: req.csrfToken(), errores: [] });
+});
 
 function normalizeEmail(correo) {
   correo = (correo || '').trim().toLowerCase();
@@ -149,7 +187,6 @@ function normalizeEmail(correo) {
   return m ? m[1] + m[3] : correo;
 }
 
-// 🧑 Registro de usuario
 app.post(
   '/registro',
   csrfProtection,
@@ -161,7 +198,9 @@ app.post(
   async (req, res) => {
     const errores = validationResult(req);
     if (!errores.isEmpty()) {
-      return res.status(400).render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
+      return res
+        .status(400)
+        .render('registro', { csrfToken: req.csrfToken(), errores: errores.array() });
     }
 
     const { nombre, apellido, pais, telefono, password } = req.body;
@@ -178,10 +217,10 @@ app.post(
 
       const passhash = await bcrypt.hash(password, 10);
       await User.create({ nombre, apellido, pais, telefono: telefono || '', correo, passhash });
-      res.redirect('/login?ok=Registro completado');
+      return res.redirect('/login?ok=Registro completado');
     } catch (err) {
       console.error('❌ Error en registro:', err);
-      res.status(500).render('registro', {
+      return res.status(500).render('registro', {
         csrfToken: req.csrfToken(),
         errores: [{ msg: 'Error interno del servidor.' }],
       });
@@ -189,7 +228,9 @@ app.post(
   }
 );
 
+// ───────────────────────────────────────────────────────────────────────────────
 // 🔐 Login usuario
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/login', csrfProtection, (req, res) => {
   delete req.session.admin;
   res.render('login', { csrfToken: req.csrfToken(), errores: [], ok: req.query.ok });
@@ -221,10 +262,10 @@ app.post(
 
       req.session.user = { id: u._id.toString(), nombre: u.nombre, correo: u.correo };
       await User.updateOne({ _id: u._id }, { last_login: new Date() });
-      res.redirect('/panel?ok=Bienvenido');
+      return res.redirect('/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login:', err);
-      res.status(500).render('login', {
+      return res.status(500).render('login', {
         csrfToken: req.csrfToken(),
         errores: [{ msg: 'Error interno del servidor.' }],
       });
@@ -232,7 +273,9 @@ app.post(
   }
 );
 
+// ───────────────────────────────────────────────────────────────────────────────
 // 🧑‍💼 Login admin
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/admin', csrfProtection, (req, res) => {
   delete req.session.user;
   res.render('admin/login', { csrfToken: req.csrfToken(), errores: [] });
@@ -261,10 +304,10 @@ app.post(
         });
       }
       req.session.admin = { id: admin._id.toString(), usuario: admin.usuario };
-      res.redirect('/admin/panel?ok=Bienvenido');
+      return res.redirect('/admin/panel?ok=Bienvenido');
     } catch (err) {
       console.error('❌ Error en login admin:', err);
-      res.status(500).render('admin/login', {
+      return res.status(500).render('admin/login', {
         csrfToken: req.csrfToken(),
         errores: [{ msg: 'Error interno del servidor.' }],
       });
@@ -272,11 +315,15 @@ app.post(
   }
 );
 
-// 🧩 Rutas de administración
+// ───────────────────────────────────────────────────────────────────────────────
+// 🧩 Rutas de administración delegadas a routers
+// ───────────────────────────────────────────────────────────────────────────────
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario
+// ───────────────────────────────────────────────────────────────────────────────
+// 👤 Panel de usuario (lista catálogo + subs activas/inactivas)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
@@ -285,7 +332,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     const ahora = new Date();
     const todasSubs = await Subscription.find({ userId: user._id }).lean();
 
-    // Actualizar suscripciones vencidas
+    // Marca suscripciones vencidas (no libera cupos, como definiste)
     for (const s of todasSubs) {
       if (s.activa && s.fechaFin && s.fechaFin < ahora) {
         await Subscription.updateOne({ _id: s._id }, { $set: { activa: false } });
@@ -309,7 +356,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       precios: p.precios || {},
     }));
 
-    res.render('panel', {
+    return res.render('panel', {
       csrfToken: req.csrfToken(),
       user,
       subsActivas,
@@ -320,30 +367,41 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error en panel usuario:', err);
-    res.redirect('/login?error=Reinicia tu sesión');
+    return res.redirect('/login?error=Reinicia tu sesión');
   }
 });
-// 🎬 Detalle de plataforma
+
+// ───────────────────────────────────────────────────────────────────────────────
+// 🎬 Detalle de plataforma (planes disponibles)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
     const plataforma = await Platform.findById(req.params.id).lean();
     if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
     const precios = [
-      { meses: 1, precio: plataforma.precios?.[1] || 0 },
-      { meses: 3, precio: plataforma.precios?.[3] || 0 },
-      { meses: 6, precio: plataforma.precios?.[6] || 0 },
+      { meses: 1,  precio: plataforma.precios?.[1]  || 0 },
+      { meses: 3,  precio: plataforma.precios?.[3]  || 0 },
+      { meses: 6,  precio: plataforma.precios?.[6]  || 0 },
       { meses: 12, precio: plataforma.precios?.[12] || 0 },
     ];
 
-    res.render('plataforma', { plataforma, precios });
+    return res.render('plataforma', { plataforma, precios });
   } catch (err) {
     console.error('❌ Error cargando plataforma:', err);
-    res.status(500).send('Error interno del servidor');
+    return res.status(500).send('Error interno del servidor');
   }
 });
 
-// 💳 Adquirir plan y descontar cupo automáticamente
+// ───────────────────────────────────────────────────────────────────────────────
+// 🔚 FIN PARTE 1 — La PARTE 2 continúa con:
+// 💳 Comprar plan (rotación), 🎟️ Ticket, Admin, Recargar, Logout, Errores, Cron, Listen
+// ───────────────────────────────────────────────────────────────────────────────
+// ✅ PARTE 2 de 2 — Pega esto inmediatamente después de la PARTE 1.
+
+// ───────────────────────────────────────────────────────────────────────────────
+// 💳 Adquirir plan con rotación ORDENADA (round-robin por lastUsed)
+// ───────────────────────────────────────────────────────────────────────────────
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -352,31 +410,37 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     const costo = parseFloat(precio);
     const mesesInt = parseInt(meses);
 
-    if (!plataforma || !user) return res.redirect('/panel?error=Datos inválidos');
-    if (Number.isNaN(costo) || Number.isNaN(mesesInt))
+    if (!plataforma || !user) {
+      return res.redirect('/panel?error=Datos inválidos');
+    }
+    if (Number.isNaN(costo) || Number.isNaN(mesesInt)) {
       return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
-    if (user.saldo < costo)
+    }
+    if ((user.saldo || 0) < costo) {
       return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
+    }
 
-    // 🔎 Buscar cuenta con cupos disponibles
-    const cuenta = await Account.findOne({
-      plataformaId: plataforma._id,
-      cupos: { $gt: 0 }
-    });
+    // 🔁 Round-robin: elige la cuenta con cupos>0 y menor lastUsed (y activa)
+    // Actualiza en una sola operación: descuenta cupo y marca lastUsed ahora.
+    const cuenta = await Account.findOneAndUpdate(
+      { plataformaId: plataforma._id, cupos: { $gt: 0 }, activa: true },
+      { $inc: { cupos: -1 }, $set: { lastUsed: new Date() } },
+      { sort: { lastUsed: 1 }, new: true }
+    );
 
     if (!cuenta) {
       return res.redirect(`/plataforma/${plataforma._id}?error=Sin cuentas disponibles en este momento`);
     }
 
-    // 💰 Descontar saldo al usuario
-    user.saldo -= costo;
+    // 💰 Descontar saldo
+    user.saldo = (user.saldo || 0) - costo;
     await user.save();
 
-    // 📆 Fechas de suscripción
+    // 📆 Fechas
     const fechaInicio = new Date();
     const fechaFin = dayjs(fechaInicio).add(mesesInt, 'month').toDate();
 
-    // 🧾 Crear suscripción con datos de la cuenta asignada (GUARDAMOS ID)
+    // 🧾 Crear suscripción (con credenciales asignadas)
     const nuevaSuscripcion = await Subscription.create({
       userId: user._id,
       platformId: plataforma._id,
@@ -387,24 +451,23 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
       activa: true,
       datosCuenta: {
         correo: cuenta.correo,
-        password: cuenta.password
-      }
+        password: cuenta.password,
+      },
     });
 
-    // 🔻 Descontar 1 cupo de la cuenta
-    await Account.updateOne({ _id: cuenta._id }, { $inc: { cupos: -1 } });
+    console.log(`✅ Cupo descontado y rotado en ${cuenta.correo} (restantes: ${Math.max(0, (cuenta.cupos || 1) - 1)})`);
 
-    console.log(`✅ Cupo descontado en ${cuenta.correo} (${(cuenta.cupos ?? 1) - 1} restantes)`);
-
-    // 🎟️ Redirigir al Ticket de compra
+    // 🎟️ Redirigir al ticket inmediatamente
     return res.redirect(`/ticket/${nuevaSuscripcion._id}`);
   } catch (err) {
-    console.error('❌ Error al adquirir plan:', err);
-    res.redirect('/panel?error=Error al adquirir plan');
+    console.error('❌ Error al adquirir plan (rotación):', err);
+    return res.redirect('/panel?error=Error al adquirir plan');
   }
 });
 
-// 🎟️ Ticket de compra — muestra plataforma, duración, credenciales y mensaje admin
+// ───────────────────────────────────────────────────────────────────────────────
+// 🎟️ Ticket de compra (ver/descargar las veces que quiera)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/ticket/:id', requireAuth, async (req, res) => {
   try {
     const suscripcion = await Subscription.findById(req.params.id)
@@ -413,22 +476,23 @@ app.get('/ticket/:id', requireAuth, async (req, res) => {
 
     if (!suscripcion) return res.status(404).render('404');
 
-    // Validar que la suscripción pertenece al usuario en sesión
+    // Restringir a dueño de la suscripción
     const userId = req.session.user?.id?.toString();
     if (suscripcion.userId?.toString() !== userId) {
       return res.status(403).render('404');
     }
 
-    // Plataforma + mensaje por duración
-    const plataforma = suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
+    const plataforma =
+      suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
+
     const dur = String(suscripcion.meses);
-    // Soporta estructura nueva `mensajes: {1,3,6,12}` o fallback a campos legacy por si existen
     const mensaje =
       (plataforma?.mensajes && (plataforma.mensajes[dur] || plataforma.mensajes[suscripcion.meses])) ||
       plataforma?.[`mensaje_${dur}`] ||
       plataforma?.[`mensaje_${suscripcion.meses}`] ||
       'Gracias por tu compra.';
 
+    // Render de la vista ticket (con botones copiar y descargar)
     return res.render('ticket', {
       suscripcion,
       plataforma,
@@ -441,7 +505,9 @@ app.get('/ticket/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 🧮 Panel admin
+// ───────────────────────────────────────────────────────────────────────────────
+// 🧮 Panel admin (dashboard simple con stats)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const usuarios = await User.find({}).sort({ createdAt: -1 }).lean();
@@ -449,11 +515,11 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
     const totalPlatforms = await Platform.countDocuments();
 
     const totalUsuarios = usuarios.length;
-    const activos = usuarios.filter(u => u.activo).length;
+    const activos = usuarios.filter(u => u.activo !== false).length;
     const inactivos = totalUsuarios - activos;
     const totalSaldo = usuarios.reduce((sum, u) => sum + (u.saldo || 0), 0);
 
-    res.render('admin/panel', {
+    return res.render('admin/panel', {
       csrfToken: req.csrfToken(),
       usuarios,
       stats: { totalUsuarios, activos, inactivos, totalSaldo, totalAccounts, totalPlatforms },
@@ -463,11 +529,13 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error cargando admin/panel:', err);
-    res.redirect('/admin?error=Error al cargar el panel');
+    return res.redirect('/admin?error=Error al cargar el panel');
   }
 });
 
-// 📊 Dashboard de suscripciones (admin)
+// ───────────────────────────────────────────────────────────────────────────────
+// 📊 Suscripciones admin (listado)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get('/admin/suscripciones', requireAdmin, async (req, res) => {
   try {
     const subs = await Subscription.find({})
@@ -476,44 +544,57 @@ app.get('/admin/suscripciones', requireAdmin, async (req, res) => {
       .sort({ fechaFin: -1 })
       .lean();
 
-    res.render('admin/suscripciones', { subs, dayjs });
+    return res.render('admin/suscripciones', { subs, dayjs });
   } catch (err) {
     console.error('❌ Error cargando dashboard de suscripciones:', err);
-    res.status(500).send('Error interno del servidor');
+    return res.status(500).send('Error interno del servidor');
   }
 });
 
-// 💰 Recargar saldo
+// ───────────────────────────────────────────────────────────────────────────────
+// 💰 Recargar saldo (admin)
+// ───────────────────────────────────────────────────────────────────────────────
 app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
   try {
     const { correo, monto, nota } = req.body;
     const user = await User.findOne({ correo: (correo || '').toLowerCase() });
     if (!user) return res.redirect('/admin/panel?error=Usuario no encontrado');
 
-    const nuevoSaldo = (user.saldo || 0) + parseInt(monto);
+    const delta = parseInt(monto);
+    if (Number.isNaN(delta)) {
+      return res.redirect('/admin/panel?error=Monto inválido');
+    }
+
+    const nuevoSaldo = (user.saldo || 0) + delta;
     await User.updateOne({ _id: user._id }, { $set: { saldo: nuevoSaldo } });
 
-    console.log(`✅ Saldo actualizado para ${correo}: ${nuevoSaldo} (${nota || 'Recarga manual'})`);
-    res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
+    console.log(`✅ Saldo actualizado: ${correo} -> ${nuevoSaldo} (${nota || 'Recarga manual'})`);
+    return res.redirect(`/admin/panel?ok=Saldo recargado a ${correo}`);
   } catch (err) {
     console.error('❌ Error al recargar saldo:', err);
-    res.redirect('/admin/panel?error=Error al recargar saldo');
+    return res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
 
-// 🚪 Logout
+// ───────────────────────────────────────────────────────────────────────────────
+// 🚪 Logout (usuario y admin)
+// ───────────────────────────────────────────────────────────────────────────────
 app.get(['/logout', '/admin/salir'], (req, res) => {
   req.session.destroy(() => res.redirect('/login?ok=Sesión cerrada correctamente'));
 });
 
-// ⚠️ Errores
+// ───────────────────────────────────────────────────────────────────────────────
+// ⚠️ 404 + Error handler
+// ───────────────────────────────────────────────────────────────────────────────
 app.use((req, res) => res.status(404).render('404'));
 app.use((err, req, res, next) => {
   console.error('❌ Error interno:', err);
-  res.status(500).send('Error Interno del Servidor');
+  return res.status(500).send('Error Interno del Servidor');
 });
 
+// ───────────────────────────────────────────────────────────────────────────────
 // 🕐 CRON INTERNO — desactivar suscripciones vencidas cada 24h (no libera cupos)
+// ───────────────────────────────────────────────────────────────────────────────
 setInterval(async () => {
   const ahora = new Date();
   try {
@@ -527,8 +608,10 @@ setInterval(async () => {
   } catch (err) {
     console.error('❌ Error en el cron de suscripciones:', err);
   }
-}, 1000 * 60 * 60 * 24); // cada 24 horas
+}, 1000 * 60 * 60 * 24); // cada 24h
 
-// 🚀 Iniciar servidor
+// ───────────────────────────────────────────────────────────────────────────────
+// 🚀 Listen
+// ───────────────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
