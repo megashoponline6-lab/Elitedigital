@@ -1,4 +1,5 @@
 // ✅ routes/adminAccounts.js — Versión final lista para Render (ESM)
+
 import express from 'express';
 import csrf from 'csurf';
 import {
@@ -12,33 +13,36 @@ const router = express.Router();
 const csrfProtection = csrf({ cookie: true });
 
 /**
- * 🛡️ Middleware de autenticación (temporal)
- * Más adelante se conectará con tu sistema real de sesiones/admin.
+ * 🛡️ Middleware de autenticación admin
+ * Evita accesos no autorizados al panel de gestión de cuentas.
  */
 const ensureAdmin = (req, res, next) => {
-  // Si más adelante usas sesiones, aquí podrás validar el rol admin:
-  // if (!req.session?.admin) return res.redirect('/admin');
+  if (req.session?.user)
+    return res.redirect('/panel?error=No tienes permiso para acceder aquí');
+  if (!req.session?.admin)
+    return res.redirect('/admin?error=Debes iniciar sesión como administrador');
   next();
 };
 
 /**
- * 📋 Rutas de gestión de cuentas
+ * 📋 Rutas de gestión de cuentas (panel admin)
+ * No libera cupos automáticamente al expirar suscripciones.
  */
 
-// 🔹 Vista principal: listado + formulario
+// 🔹 Vista principal: listado de cuentas + formulario
 router.get('/admin/cuentas', ensureAdmin, csrfProtection, view);
 
-// 🔹 Crear nueva cuenta
+// 🔹 Crear nueva cuenta (correo, contraseña, cupos, etc.)
 router.post('/admin/cuentas', ensureAdmin, csrfProtection, create);
 
-// 🔹 Actualizar una cuenta existente
+// 🔹 Actualizar cuenta existente
 router.post('/admin/cuentas/:id/update', ensureAdmin, csrfProtection, update);
 
-// 🔹 Eliminar una cuenta
+// 🔹 Eliminar cuenta permanentemente
 router.post('/admin/cuentas/:id/delete', ensureAdmin, csrfProtection, remove);
 
 /**
- * 🚀 Exportación por defecto
- * Compatible con Node ESM y Render.
+ * 🚀 Exportación
+ * Compatible con entorno ESM y despliegue en Render.
  */
 export default router;
