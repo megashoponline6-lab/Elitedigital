@@ -1,4 +1,4 @@
-// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas)
+// ✅ server.js — versión completa y funcional (admin panel + saldo + suscripciones activas e inactivas)
 
 import express from 'express';
 import session from 'express-session';
@@ -133,7 +133,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// 🏠 Inicio (solo muestra hero)
+// 🏠 Inicio
 app.get('/', (req, res) => {
   res.render('home', { productos: [], etiquetas: [], filtro: '' });
 });
@@ -275,19 +275,34 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// 👤 Panel usuario — ahora con suscripciones activas
+// 👤 Panel usuario — con suscripciones activas + historial
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
 
-    // 🧾 Traer suscripciones activas del usuario
-    const subs = await Subscription.find({ userId: user._id, activa: true })
+    const ahora = new Date();
+
+    // Buscar y actualizar suscripciones vencidas
+    const todasSubs = await Subscription.find({ userId: user._id }).lean();
+    for (const s of todasSubs) {
+      if (s.activa && s.fechaFin && s.fechaFin < ahora) {
+        await Subscription.updateOne({ _id: s._id }, { $set: { activa: false } });
+      }
+    }
+
+    // Obtener activas e inactivas
+    const subsActivas = await Subscription.find({ userId: user._id, activa: true })
       .populate('platformId')
       .sort({ fechaFin: -1 })
       .lean();
 
-    const productos = platforms.map((p) => ({
+    const subsInactivas = await Subscription.find({ userId: user._id, activa: false })
+      .populate('platformId')
+      .sort({ fechaFin: -1 })
+      .lean();
+
+    const productos = platforms.map(p => ({
       _id: p._id,
       nombre: p.name,
       logo: p.logoUrl,
@@ -297,10 +312,11 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     res.render('panel', {
       csrfToken: req.csrfToken(),
       user,
-      subs,
+      subsActivas,
+      subsInactivas,
+      productos,
       dias: null,
       tickets: [],
-      productos,
     });
   } catch (err) {
     console.error('❌ Error en panel usuario:', err);
@@ -308,7 +324,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   }
 });
 
-// 🎬 Detalle de plataforma (planes reales)
+// 🎬 Detalle de plataforma
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
     const plataforma = await Platform.findById(req.params.id).lean();
@@ -328,7 +344,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 💳 Adquirir plan — ahora registra suscripción
+// 💳 Adquirir plan — registra suscripción
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -346,7 +362,7 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     user.saldo -= costo;
     await user.save();
 
-    // 🧾 Guardar suscripción en la base de datos
+    // Crear suscripción
     const fechaInicio = new Date();
     const fechaFin = new Date();
     fechaFin.setMonth(fechaFin.getMonth() + mesesInt);
@@ -375,7 +391,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
     const totalPlatforms = await Platform.countDocuments();
 
     const totalUsuarios = usuarios.length;
-    const activos = usuarios.filter((u) => u.activo).length;
+    const activos = usuarios.filter(u => u.activo).length;
     const inactivos = totalUsuarios - activos;
     const totalSaldo = usuarios.reduce((sum, u) => sum + (u.saldo || 0), 0);
 
