@@ -110,7 +110,8 @@
 </div>
 
 <!-- 🔮 Modal de confirmación -->
-<form id="adquirirForm" method="POST">
+<form id="adquirirForm" method="POST" action="">
+  <input type="hidden" name="_csrf" value="<%= csrfToken || '' %>">
   <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
@@ -148,6 +149,6 @@
     
     document.getElementById('inputMeses').value = meses;
     document.getElementById('inputPrecio').value = precio;
-    form.action = \`/plataforma/\${id}/adquirir\`;
+    form.action = `/plataforma/${id}/adquirir`; // ✅ ruta exacta del backend
   });
 </script>
