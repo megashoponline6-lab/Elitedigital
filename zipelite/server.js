@@ -457,8 +457,9 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
 
     console.log(`✅ Cupo descontado y rotado en ${cuenta.correo} (restantes: ${Math.max(0, (cuenta.cupos || 1) - 1)})`);
 
-    // 🎟️ Redirigir al ticket inmediatamente
-    return res.redirect(`/ticket/${nuevaSuscripcion._id}`);
+    // 🎟️ Enviar ID al front para abrir el modal sin salir del panel
+return res.json({ ok: true, ticketId: nuevaSuscripcion._id });
+
   } catch (err) {
     console.error('❌ Error al adquirir plan (rotación):', err);
     return res.redirect('/panel?error=Error al adquirir plan');
