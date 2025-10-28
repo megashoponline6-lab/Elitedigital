@@ -1,50 +1,49 @@
-// ✅ models/Account.js — Versión final con suscripciones funcionales
+// ✅ models/Account.js — versión final y funcional con cupos automáticos
 import mongoose from 'mongoose';
 
 const AccountSchema = new mongoose.Schema(
   {
-    // 🔗 Plataforma asociada (Netflix, Disney+, etc.)
-    platform: {
+    // 🎬 Plataforma asociada (Netflix, Disney+, etc.)
+    plataformaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Platform',
-      required: true
+      required: true,
     },
 
-    // 📧 Correo del usuario que adquirió el plan
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
+    // 📧 Correo y contraseña de la cuenta compartida
+    correo: {
+      type: String,
+      required: true,
+      trim: true,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      required: true,
+      trim: true,
     },
 
-    // 🕐 Meses de duración
-    meses: {
+    // 👥 Cupos disponibles (ej: Netflix con 4 cupos)
+    cupos: {
       type: Number,
-      required: true
+      required: true,
+      min: 0,
     },
 
-    // 💰 Precio pagado por el usuario
-    precioPagado: {
-      type: Number,
-      required: true
-    },
-
-    // 📅 Fecha de vencimiento
-    vence_en: {
-      type: Date,
-      required: true
-    },
-
-    // 🔒 Estado de la suscripción
-    activo: {
+    // 📋 Estado de la cuenta (activa o pausada)
+    activa: {
       type: Boolean,
-      default: true
-    }
+      default: true,
+    },
   },
   { timestamps: true }
 );
 
-AccountSchema.index({ userId: 1, platform: 1 });
+// 🔎 Índice para mejorar búsquedas por plataforma
+AccountSchema.index({ plataformaId: 1, correo: 1 });
 
-const Account = mongoose.model('Account', AccountSchema);
+// ✅ Evita error de modelo duplicado en entornos tipo Render o Vercel
+const Account =
+  mongoose.models.Account || mongoose.model('Account', AccountSchema);
+
 export default Account;
