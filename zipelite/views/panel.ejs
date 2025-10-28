@@ -140,15 +140,15 @@
   </div>
 
   <!-- ================================ -->
-  <!-- 📋 MIS SUSCRIPCIONES ACTIVAS -->
+  <!-- 📋 SUSCRIPCIONES -->
   <!-- ================================ -->
   <hr class="my-5">
 
   <div class="neon-box p-4 mt-4">
     <h3 class="mb-4 text-center">📅 Mis suscripciones activas</h3>
 
-    <% if (subs && subs.length > 0) { %>
-      <div class="table-responsive">
+    <% if (subsActivas && subsActivas.length > 0) { %>
+      <div class="table-responsive mb-5">
         <table class="table table-neon table-borderless align-middle text-center">
           <thead>
             <tr>
@@ -160,7 +160,7 @@
             </tr>
           </thead>
           <tbody>
-            <% subs.forEach(s => { %>
+            <% subsActivas.forEach(s => { %>
               <tr>
                 <td>
                   <% if (s.platformId && s.platformId.logoUrl) { %>
@@ -174,20 +174,53 @@
                 <td><%= s.meses %> mes<%= s.meses > 1 ? 'es' : '' %></td>
                 <td>$<%= s.precio %> MXN</td>
                 <td><%= dayjs(s.fechaFin).format('DD/MM/YYYY') %></td>
-                <td>
-                  <% if (s.activa) { %>
-                    <span class="badge bg-success">Activa</span>
-                  <% } else { %>
-                    <span class="badge bg-secondary">Inactiva</span>
-                  <% } %>
-                </td>
+                <td><span class="badge bg-success">Activa</span></td>
               </tr>
             <% }) %>
           </tbody>
         </table>
       </div>
     <% } else { %>
-      <p class="text-secondary text-center">No tienes suscripciones activas aún.</p>
+      <p class="text-secondary text-center mb-5">No tienes suscripciones activas.</p>
+    <% } %>
+
+    <h3 class="mb-4 text-center">📜 Historial de suscripciones vencidas</h3>
+
+    <% if (subsInactivas && subsInactivas.length > 0) { %>
+      <div class="table-responsive">
+        <table class="table table-neon table-borderless align-middle text-center">
+          <thead>
+            <tr>
+              <th>Plataforma</th>
+              <th>Duración</th>
+              <th>Precio Pagado</th>
+              <th>Fecha de vencimiento</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% subsInactivas.forEach(s => { %>
+              <tr style="opacity: 0.6;">
+                <td>
+                  <% if (s.platformId && s.platformId.logoUrl) { %>
+                    <img src="<%= s.platformId.logoUrl %>" alt="<%= s.platformId.name %>" style="height:40px; border-radius:6px;">
+                    <br>
+                    <small><%= s.platformId.name %></small>
+                  <% } else { %>
+                    <%= s.platformId ? s.platformId.name : 'N/A' %>
+                  <% } %>
+                </td>
+                <td><%= s.meses %> mes<%= s.meses > 1 ? 'es' : '' %></td>
+                <td>$<%= s.precio %> MXN</td>
+                <td><%= dayjs(s.fechaFin).format('DD/MM/YYYY') %></td>
+                <td><span class="badge bg-secondary">Inactiva</span></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } else { %>
+      <p class="text-secondary text-center">No tienes suscripciones vencidas aún.</p>
     <% } %>
   </div>
 </div>
