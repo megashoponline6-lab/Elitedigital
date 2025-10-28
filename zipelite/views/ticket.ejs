@@ -2,7 +2,9 @@
 
 <div class="ticket-container" style="max-width:600px;margin:40px auto;padding:25px;border-radius:20px;background:#fff;box-shadow:0 0 15px rgba(0,0,0,0.15);font-family:'Segoe UI',sans-serif;">
   <div style="text-align:center;">
-    <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:70px;margin-bottom:10px;">
+    <% if (plataforma.logoUrl) { %>
+      <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:70px;margin-bottom:10px;">
+    <% } %>
     <h2 style="margin:10px 0;color:#e50914;">🎟️ Ticket de Compra</h2>
     <p style="color:#666;">Gracias por confiar en <strong>Eliteflix</strong></p>
   </div>
@@ -26,7 +28,7 @@
 
   <div style="margin-top:20px;background:#f8f8f8;padding:10px 15px;border-left:4px solid #e50914;border-radius:8px;">
     <p style="margin:0;"><strong>💬 Mensaje del administrador:</strong></p>
-    <p style="margin:5px 0 0 0;color:#444;"><%= mensaje %></p>
+    <p style="margin:5px 0 0 0;color:#444;white-space:pre-line;"><%= mensaje %></p>
   </div>
 
   <div style="margin-top:20px;">
@@ -47,7 +49,7 @@
 
 <script>
 function copiar(id) {
-  const texto = document.getElementById(id).innerText;
+  const texto = document.getElementById(id).innerText.trim();
   navigator.clipboard.writeText(texto).then(() => {
     alert('Copiado: ' + texto);
   });
