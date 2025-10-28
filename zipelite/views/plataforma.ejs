@@ -54,17 +54,23 @@
 
 <div class="container text-center mt-5">
   <% 
-    // ✅ Detectar automáticamente si el logo viene de /uploads o de /img/plataformas
-    let logoPath;
+    // ✅ Detección inteligente del logo (corrige /plataforma/img/... → /img/...)
+    let logoPath = '/img/default.png'; // Fallback opcional
+
     if (plataforma.logoUrl) {
-      // si el backend ya pasa una URL completa
-      logoPath = plataforma.logoUrl;
+      if (plataforma.logoUrl.includes('uploads')) {
+        logoPath = plataforma.logoUrl.startsWith('/') ? plataforma.logoUrl : '/' + plataforma.logoUrl;
+      } else if (plataforma.logoUrl.includes('/plataforma/img/')) {
+        logoPath = plataforma.logoUrl.replace('/plataforma', '');
+      } else if (plataforma.logoUrl.includes('/img/')) {
+        logoPath = plataforma.logoUrl;
+      } else {
+        logoPath = '/img/plataformas/' + plataforma.logoUrl;
+      }
     } else if (plataforma.logo && plataforma.logo.includes('uploads')) {
       logoPath = '/' + plataforma.logo;
     } else if (plataforma.logo) {
       logoPath = '/img/plataformas/' + plataforma.logo;
-    } else {
-      logoPath = '/img/default.png'; // fallback opcional
     }
   %>
 
