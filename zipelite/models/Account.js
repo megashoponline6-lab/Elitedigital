@@ -17,6 +17,7 @@ const AccountSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
     },
+
     password: {
       type: String,
       required: true,
@@ -42,7 +43,7 @@ const AccountSchema = new mongoose.Schema(
 // 🔎 Índice para mejorar búsquedas por plataforma
 AccountSchema.index({ plataformaId: 1, correo: 1 });
 
-// ✅ Evita error de modelo duplicado en entornos tipo Render o Vercel
+// ✅ Evita error de modelo duplicado en Render/Vercel
 const Account =
   mongoose.models.Account || mongoose.model('Account', AccountSchema);
 
