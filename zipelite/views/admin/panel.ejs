@@ -1,5 +1,63 @@
 <% var title = 'Panel Admin'; %>
 
+<style>
+  body {
+    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    color: #e0e0e0;
+  }
+
+  h2, h3, h5 {
+    color: #fff;
+    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
+  }
+
+  .btn-neon {
+    background: linear-gradient(90deg, #ff003c, #ff6a00);
+    border: none;
+    color: #fff;
+    font-weight: 600;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
+    transition: transform 0.2s, box-shadow 0.3s;
+    text-decoration: none;
+  }
+  .btn-neon:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(255, 0, 60, 0.6);
+  }
+
+  .neon-box {
+    background: rgba(20, 20, 30, 0.75);
+    border: 1px solid rgba(255, 0, 60, 0.3);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3), 0 0 30px rgba(0, 150, 255, 0.2);
+    backdrop-filter: blur(8px);
+    border-radius: 1rem;
+  }
+
+  .stats-box {
+    background: rgba(30, 30, 40, 0.7);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3);
+  }
+
+  .stats-box h4 {
+    color: #00eaff;
+    font-size: 2rem;
+  }
+
+  .stats-box p {
+    color: #aaa;
+    margin-top: 0.5rem;
+  }
+
+  .table-dark th, .table-dark td {
+    vertical-align: middle;
+  }
+</style>
+
 <div class="container-fluid mt-3 text-light">
   <!-- 🔝 ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-center mb-3">
@@ -8,6 +66,13 @@
       <a href="/admin/cambiar-password" class="btn btn-warning me-2">Cambiar contraseña</a>
       <a href="/admin/salir" class="btn btn-outline-light">Salir</a>
     </div>
+  </div>
+
+  <!-- 📊 Dashboard de Suscripciones -->
+  <div class="text-end mb-3">
+    <a href="/admin/suscripciones" class="btn btn-neon">
+      📊 Ver todas las suscripciones
+    </a>
   </div>
 
   <!-- 🔔 ALERTAS -->
