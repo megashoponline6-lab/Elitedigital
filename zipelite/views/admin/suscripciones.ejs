@@ -78,6 +78,23 @@
     box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
   }
 
+  .btn-ticket {
+    background: #00c8ff;
+    color: #000;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 0.4rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    text-decoration: none;
+  }
+
+  .btn-ticket:hover {
+    background: #00a3d6;
+    color: #fff;
+    transform: scale(1.05);
+  }
+
   /* 🔍 Barra de búsqueda */
   .search-bar {
     display: flex;
@@ -120,6 +137,83 @@
   .toggle-btn:hover {
     background: rgba(0, 200, 255, 0.2);
   }
+
+  /* 🎟️ Modal personalizado */
+  #ticketModal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+    left: 0; top: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    justify-content: center;
+    align-items: center;
+  }
+
+  #ticketModal .modal-content {
+    background: #121217;
+    color: #fff;
+    border-radius: 0.75rem;
+    padding: 1rem;
+    width: 95%;
+    max-width: 750px;
+    max-height: 90%;
+    overflow-y: auto;
+    box-shadow: 0 0 25px rgba(0, 200, 255, 0.25);
+    animation: fadeIn 0.3s ease;
+    position: relative;
+  }
+
+  #ticketModal .close {
+    float: right;
+    font-size: 1.6rem;
+    font-weight: bold;
+    color: #ff003c;
+    cursor: pointer;
+  }
+
+  @keyframes fadeIn {
+    from {opacity: 0; transform: scale(0.9);}
+    to {opacity: 1; transform: scale(1);}
+  }
+
+  #ticketModal iframe {
+    width: 100%;
+    height: 80vh;
+    border: none;
+    border-radius: 0.5rem;
+    background: #fff;
+  }
+
+  /* 🌀 Loader animado */
+  #loader {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.75);
+    color: #00c8ff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border-radius: 0.75rem;
+    z-index: 10;
+    flex-direction: column;
+  }
+
+  .spinner {
+    border: 4px solid rgba(255,255,255,0.1);
+    border-left-color: #00c8ff;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    margin-bottom: 10px;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
 </style>
 
 <div class="container mt-5">
@@ -157,6 +251,9 @@
               <th>Inicio</th>
               <th>Fin</th>
               <th>Estado</th>
+              <th>📧 Cuenta Asignada</th>
+              <th>🔒 Contraseña</th>
+              <th>🎟️ Ticket</th>
             </tr>
           </thead>
           <tbody>
@@ -182,6 +279,23 @@
                     <span class="badge bg-danger">Vencida</span>
                   <% } %>
                 </td>
+                <td>
+                  <% if (s.datosCuenta?.correo) { %>
+                    <code><%= s.datosCuenta.correo %></code>
+                  <% } else { %>
+                    <em class="text-muted">Sin asignar</em>
+                  <% } %>
+                </td>
+                <td>
+                  <% if (s.datosCuenta?.password) { %>
+                    <code><%= s.datosCuenta.password %></code>
+                  <% } else { %>
+                    <em class="text-muted">N/A</em>
+                  <% } %>
+                </td>
+                <td>
+                  <button class="btn-ticket" onclick="verTicket('<%= s._id %>')">Ver Ticket</button>
+                </td>
               </tr>
             <% }) %>
           </tbody>
@@ -193,6 +307,18 @@
   </div>
 </div>
 
+<!-- 🎟️ Modal Ticket -->
+<div id="ticketModal">
+  <div class="modal-content">
+    <span class="close" onclick="cerrarTicket()">&times;</span>
+    <div id="loader">
+      <div class="spinner"></div>
+      Cargando ticket…
+    </div>
+    <iframe id="ticketFrame" src=""></iframe>
+  </div>
+</div>
+
 <script>
   const buscador = document.getElementById('buscador');
   const filas = document.querySelectorAll('#tablaSubs tbody tr');
@@ -201,7 +327,6 @@
   const toggleBtn = document.getElementById('toggleVencidas');
   let mostrarVencidas = false;
 
-  // Ocultar las vencidas al cargar
   filas.forEach(f => {
     if (f.classList.contains('vencida')) f.style.display = 'none';
   });
@@ -233,4 +358,30 @@
   });
 
   actualizarContador();
+
+  const ticketModal = document.getElementById('ticketModal');
+  const ticketFrame = document.getElementById('ticketFrame');
+  const loader = document.getElementById('loader');
+
+  function verTicket(id) {
+    ticketFrame.src = `/ticket/${id}`;
+    ticketModal.style.display = 'flex';
+    loader.style.display = 'flex';
+    ticketFrame.onload = () => {
+      loader.style.display = 'none';
+    };
+  }
+
+  function cerrarTicket() {
+    ticketModal.style.display = 'none';
+    ticketFrame.src = '';
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cerrarTicket();
+  });
+
+  window.addEventListener('click', (e) => {
+    if (e.target === ticketModal) cerrarTicket();
+  });
 </script>
