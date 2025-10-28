@@ -66,7 +66,6 @@
     object-fit: cover;
   }
 
-  /* === Tabla de suscripciones === */
   .table-neon {
     background: rgba(15, 15, 25, 0.7);
     border: 1px solid rgba(255, 0, 60, 0.3);
@@ -139,11 +138,9 @@
     </div>
   </div>
 
-  <!-- ================================ -->
-  <!-- 📋 SUSCRIPCIONES -->
-  <!-- ================================ -->
   <hr class="my-5">
 
+  <!-- 📅 SUSCRIPCIONES ACTIVAS -->
   <div class="neon-box p-4 mt-4">
     <h3 class="mb-4 text-center">📅 Mis suscripciones activas</h3>
 
@@ -157,6 +154,7 @@
               <th>Precio Pagado</th>
               <th>Vence En</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -175,6 +173,11 @@
                 <td>$<%= s.precio %> MXN</td>
                 <td><%= dayjs(s.fechaFin).format('DD/MM/YYYY') %></td>
                 <td><span class="badge bg-success">Activa</span></td>
+                <td>
+                  <a href="/ticket/<%= s._id %>" target="_blank" class="btn btn-sm btn-outline-danger">
+                    🎟️ Ver Ticket
+                  </a>
+                </td>
               </tr>
             <% }) %>
           </tbody>
@@ -184,6 +187,7 @@
       <p class="text-secondary text-center mb-5">No tienes suscripciones activas.</p>
     <% } %>
 
+    <!-- 📜 HISTORIAL DE SUSCRIPCIONES VENCIDAS -->
     <h3 class="mb-4 text-center">📜 Historial de suscripciones vencidas</h3>
 
     <% if (subsInactivas && subsInactivas.length > 0) { %>
@@ -196,6 +200,7 @@
               <th>Precio Pagado</th>
               <th>Fecha de vencimiento</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -214,6 +219,11 @@
                 <td>$<%= s.precio %> MXN</td>
                 <td><%= dayjs(s.fechaFin).format('DD/MM/YYYY') %></td>
                 <td><span class="badge bg-secondary">Inactiva</span></td>
+                <td>
+                  <a href="/ticket/<%= s._id %>" target="_blank" class="btn btn-sm btn-outline-light">
+                    🎟️ Ver Ticket
+                  </a>
+                </td>
               </tr>
             <% }) %>
           </tbody>
