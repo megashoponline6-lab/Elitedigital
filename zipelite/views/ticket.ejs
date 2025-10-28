@@ -1,4 +1,16 @@
 <div id="ticket" style="max-width:700px;margin:30px auto;padding:30px;border-radius:20px;background:#121212;color:#fff;box-shadow:0 0 20px rgba(0,0,0,0.5);font-family:'Segoe UI',sans-serif;">
+
+  <% if (sess && sess.admin) { %>
+    <div style="background:#e50914;color:white;padding:10px 15px;border-radius:10px;margin-bottom:20px;text-align:center;font-weight:600;">
+      👁️ Vista de administrador — Ticket perteneciente a 
+      <%= suscripcion.userId ? suscripcion.userId.correo : 'Usuario desconocido' %>
+      <br>
+      <button onclick="window.location.href='/admin/suscripciones'" style="margin-top:8px;padding:6px 12px;border:none;border-radius:8px;background:#fff;color:#e50914;cursor:pointer;font-weight:600;">
+        ⬅️ Volver al Panel Admin
+      </button>
+    </div>
+  <% } %>
+
   <div style="text-align:center;">
     <% if (plataforma.logoUrl) { %>
       <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:90px;margin-bottom:10px;">
@@ -35,9 +47,15 @@
   </div>
 
   <div style="text-align:center;margin-top:35px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
-    <button onclick="window.location.href='/panel'" style="padding:10px 20px;border:none;border-radius:10px;background:#333;color:#fff;cursor:pointer;font-weight:600;">
-      ⬅️ Volver al Panel
-    </button>
+    <% if (sess && sess.admin) { %>
+      <button onclick="window.location.href='/admin/suscripciones'" style="padding:10px 20px;border:none;border-radius:10px;background:#333;color:#fff;cursor:pointer;font-weight:600;">
+        ⬅️ Volver al Panel Admin
+      </button>
+    <% } else { %>
+      <button onclick="window.location.href='/panel'" style="padding:10px 20px;border:none;border-radius:10px;background:#333;color:#fff;cursor:pointer;font-weight:600;">
+        ⬅️ Volver al Panel
+      </button>
+    <% } %>
 
     <button id="btnPDF" style="padding:10px 20px;border:none;border-radius:10px;background:#e50914;color:#fff;cursor:pointer;font-weight:600;">
       📄 Descargar Ticket (PDF)
@@ -74,7 +92,6 @@ document.getElementById('btnPDF').addEventListener('click', () => {
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  // Hacemos scroll hacia arriba para que capture todo
   window.scrollTo(0, 0);
   html2pdf().from(ticket).set(opt).save();
 });
