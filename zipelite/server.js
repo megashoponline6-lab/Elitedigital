@@ -1,4 +1,4 @@
-// ✅ server.js — versión completa (admin panel + saldo + suscripciones activas, inactivas, cron y dashboard admin)
+// ✅ server.js — versión completa (admin panel + saldo + suscripciones + cupos automáticos)
 
 import express from 'express';
 import session from 'express-session';
@@ -281,9 +281,9 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
 
     const ahora = new Date();
+    const todasSubs = await Subscription.find({ userId: user._id }).lean();
 
     // Actualizar suscripciones vencidas
-    const todasSubs = await Subscription.find({ userId: user._id }).lean();
     for (const s of todasSubs) {
       if (s.activa && s.fechaFin && s.fechaFin < ahora) {
         await Subscription.updateOne({ _id: s._id }, { $set: { activa: false } });
@@ -342,7 +342,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
   }
 });
 
-// 💳 Adquirir plan
+// 💳 Adquirir plan y descontar cupo automáticamente
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
     const { meses, precio } = req.body;
@@ -357,13 +357,26 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
     if (user.saldo < costo)
       return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
 
+    // 🔎 Buscar cuenta con cupos disponibles
+    const cuenta = await Account.findOne({
+      plataformaId: plataforma._id,
+      cupos: { $gt: 0 }
+    });
+
+    if (!cuenta) {
+      return res.redirect(`/plataforma/${plataforma._id}?error=Sin cuentas disponibles en este momento`);
+    }
+
+    // 💰 Descontar saldo al usuario
     user.saldo -= costo;
     await user.save();
 
+    // 📆 Fechas de suscripción
     const fechaInicio = new Date();
     const fechaFin = new Date();
     fechaFin.setMonth(fechaFin.getMonth() + mesesInt);
 
+    // 🧾 Crear suscripción con datos de la cuenta asignada
     await Subscription.create({
       userId: user._id,
       platformId: plataforma._id,
@@ -371,7 +384,17 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
       precio: costo,
       fechaInicio,
       fechaFin,
+      activa: true,
+      datosCuenta: {
+        correo: cuenta.correo,
+        password: cuenta.password
+      }
     });
+
+    // 🔻 Descontar 1 cupo de la cuenta
+    await Account.updateOne({ _id: cuenta._id }, { $inc: { cupos: -1 } });
+
+    console.log(`✅ Cupo descontado en ${cuenta.correo} (${cuenta.cupos - 1} restantes)`);
 
     res.redirect(`/panel?ok=Adquiriste ${plataforma.name} por ${mesesInt} mes${mesesInt > 1 ? 'es' : ''}`);
   } catch (err) {
@@ -406,7 +429,7 @@ app.get('/admin/panel', requireAdmin, csrfProtection, async (req, res) => {
   }
 });
 
-// 📊 Nuevo Dashboard: Suscripciones (admin)
+// 📊 Dashboard de suscripciones (admin)
 app.get('/admin/suscripciones', requireAdmin, async (req, res) => {
   try {
     const subs = await Subscription.find({})
@@ -468,5 +491,6 @@ setInterval(async () => {
   }
 }, 1000 * 60 * 60 * 24); // cada 24 horas
 
+// 🚀 Iniciar servidor
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
