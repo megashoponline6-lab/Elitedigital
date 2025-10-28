@@ -68,7 +68,7 @@
               <th>Nombre</th>
               <th>Disponible</th>
               <th>Actualizar logo / ruta</th>
-              <th>💰 Precios (1M / 3M / 6M / 12M)</th>
+              <th>💰 Precios y Mensajes</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -127,14 +127,16 @@
                     </form>
                   </td>
 
-                  <!-- 💰 Editar precios -->
+                  <!-- 💰 Editar precios y mensajes -->
                   <td>
                     <form
                       action="/admin/plataformas/<%= p._id %>/precios"
                       method="POST"
-                      class="d-flex flex-column gap-1"
+                      class="d-flex flex-column gap-2"
                     >
                       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                      <!-- 🏷️ Precios -->
                       <div class="input-group input-group-sm">
                         <span class="input-group-text bg-dark text-light border-secondary">1M</span>
                         <input type="number" name="mes1" value="<%= p.precios?.[1] || '' %>" class="form-control bg-dark text-light border-secondary">
@@ -151,6 +153,35 @@
                         <span class="input-group-text bg-dark text-light border-secondary">12M</span>
                         <input type="number" name="mes12" value="<%= p.precios?.[12] || '' %>" class="form-control bg-dark text-light border-secondary">
                       </div>
+
+                      <hr class="border-secondary my-2">
+
+                      <!-- 🧾 Mensajes personalizados -->
+                      <label class="form-label text-info mt-1 mb-0 small">🧾 Mensajes personalizados</label>
+                      <textarea
+                        name="msg1"
+                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                        placeholder="Mensaje para plan de 1 mes"
+                        rows="2"><%= p.mensajes?.[1] || '' %></textarea>
+
+                      <textarea
+                        name="msg3"
+                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                        placeholder="Mensaje para plan de 3 meses"
+                        rows="2"><%= p.mensajes?.[3] || '' %></textarea>
+
+                      <textarea
+                        name="msg6"
+                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                        placeholder="Mensaje para plan de 6 meses"
+                        rows="2"><%= p.mensajes?.[6] || '' %></textarea>
+
+                      <textarea
+                        name="msg12"
+                        class="form-control form-control-sm bg-dark text-light border-secondary"
+                        placeholder="Mensaje para plan de 12 meses"
+                        rows="2"><%= p.mensajes?.[12] || '' %></textarea>
+
                       <button class="btn btn-sm btn-outline-info mt-1">Guardar</button>
                     </form>
                   </td>
