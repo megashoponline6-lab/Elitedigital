@@ -2,49 +2,46 @@
 
 <style>
   body {
-    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    background-color: #0e0e12;
     color: #e0e0e0;
   }
 
   h2, h3, h5 {
     color: #fff;
-    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
   }
 
-  .btn-neon {
-    background: linear-gradient(90deg, #ff003c, #ff6a00);
+  .btn-primary-custom {
+    background: #ff003c;
     border: none;
     color: #fff;
     font-weight: 600;
     border-radius: 0.5rem;
     padding: 0.6rem 1.2rem;
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
     transition: transform 0.2s, box-shadow 0.3s;
     text-decoration: none;
   }
-  .btn-neon:hover {
+
+  .btn-primary-custom:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(255, 0, 60, 0.6);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
   }
 
-  .neon-box {
-    background: rgba(20, 20, 30, 0.75);
-    border: 1px solid rgba(255, 0, 60, 0.3);
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3), 0 0 30px rgba(0, 150, 255, 0.2);
-    backdrop-filter: blur(8px);
-    border-radius: 1rem;
+  .card {
+    background: #1b1b22;
+    border: 1px solid #2a2a33;
+    border-radius: 0.75rem;
+    color: #e0e0e0;
   }
 
   .stats-box {
-    background: rgba(30, 30, 40, 0.7);
+    background: #181820;
     border-radius: 1rem;
     padding: 1.5rem;
     text-align: center;
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3);
   }
 
   .stats-box h4 {
-    color: #00eaff;
+    color: #00c8ff;
     font-size: 2rem;
   }
 
@@ -55,6 +52,11 @@
 
   .table-dark th, .table-dark td {
     vertical-align: middle;
+  }
+
+  .badge {
+    font-size: 0.9rem;
+    padding: 0.35em 0.75em;
   }
 </style>
 
@@ -70,7 +72,7 @@
 
   <!-- 📊 Dashboard de Suscripciones -->
   <div class="text-end mb-3">
-    <a href="/admin/suscripciones" class="btn btn-neon">
+    <a href="/admin/suscripciones" class="btn-primary-custom">
       📊 Ver todas las suscripciones
     </a>
   </div>
@@ -94,26 +96,24 @@
 
     <!-- 🧾 RESUMEN GENERAL -->
     <div class="col-lg-6">
-      <div class="card bg-dark border-secondary rounded-4 shadow">
-        <div class="card-body">
-          <h5 class="mb-3">📊 Resumen General</h5>
-          <div class="row text-center">
-            <div class="col">
-              <div class="h4"><%= stats?.totalUsuarios || 0 %></div>
-              <div class="text-secondary small">Usuarios totales</div>
-            </div>
-            <div class="col">
-              <div class="h4 text-success"><%= stats?.activos || 0 %></div>
-              <div class="text-secondary small">Activos</div>
-            </div>
-            <div class="col">
-              <div class="h4 text-danger"><%= stats?.inactivos || 0 %></div>
-              <div class="text-secondary small">Inactivos</div>
-            </div>
-            <div class="col">
-              <div class="h4 text-warning">$<%= stats?.totalSaldo || 0 %></div>
-              <div class="text-secondary small">Saldo total</div>
-            </div>
+      <div class="card shadow-sm p-3">
+        <h5 class="mb-3">📊 Resumen General</h5>
+        <div class="row text-center">
+          <div class="col">
+            <div class="h4"><%= stats?.totalUsuarios || 0 %></div>
+            <div class="text-secondary small">Usuarios totales</div>
+          </div>
+          <div class="col">
+            <div class="h4 text-success"><%= stats?.activos || 0 %></div>
+            <div class="text-secondary small">Activos</div>
+          </div>
+          <div class="col">
+            <div class="h4 text-danger"><%= stats?.inactivos || 0 %></div>
+            <div class="text-secondary small">Inactivos</div>
+          </div>
+          <div class="col">
+            <div class="h4 text-warning">$<%= stats?.totalSaldo || 0 %></div>
+            <div class="text-secondary small">Saldo total</div>
           </div>
         </div>
       </div>
@@ -121,139 +121,131 @@
 
     <!-- 💰 RECARGAR SALDO -->
     <div class="col-lg-6">
-      <div class="card bg-dark border-secondary rounded-4 shadow">
-        <div class="card-body">
-          <h5 class="mb-3">💰 Recargar saldo</h5>
-          <form class="row g-2" method="POST" action="/admin/recargar">
-            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="card shadow-sm p-3">
+        <h5 class="mb-3">💰 Recargar saldo</h5>
+        <form class="row g-2" method="POST" action="/admin/recargar">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-            <div class="col-md-4">
-              <input
-                class="form-control bg-dark text-light border-secondary"
-                name="correo"
-                type="email"
-                placeholder="Correo del usuario"
-                required
-              >
-            </div>
+          <div class="col-md-4">
+            <input
+              class="form-control bg-dark text-light border-secondary"
+              name="correo"
+              type="email"
+              placeholder="Correo del usuario"
+              required
+            >
+          </div>
 
-            <div class="col-md-3">
-              <input
-                class="form-control bg-dark text-light border-secondary"
-                name="monto"
-                type="number"
-                min="1"
-                placeholder="Monto"
-                required
-              >
-            </div>
+          <div class="col-md-3">
+            <input
+              class="form-control bg-dark text-light border-secondary"
+              name="monto"
+              type="number"
+              min="1"
+              placeholder="Monto"
+              required
+            >
+          </div>
 
-            <div class="col-md-3">
-              <input
-                class="form-control bg-dark text-light border-secondary"
-                name="nota"
-                placeholder="Nota (opcional)"
-              >
-            </div>
+          <div class="col-md-3">
+            <input
+              class="form-control bg-dark text-light border-secondary"
+              name="nota"
+              placeholder="Nota (opcional)"
+            >
+          </div>
 
-            <div class="col-md-2">
-              <button class="btn btn-danger w-100">Cargar</button>
-            </div>
-          </form>
-        </div>
+          <div class="col-md-2">
+            <button class="btn btn-danger w-100">Cargar</button>
+          </div>
+        </form>
       </div>
     </div>
 
     <!-- 👥 USUARIOS -->
     <div class="col-lg-12">
-      <div class="card bg-dark border-secondary rounded-4 shadow">
-        <div class="card-body">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <h5>👥 Usuarios registrados (MongoDB)</h5>
-            <button class="btn btn-sm btn-outline-light" type="button" id="toggleUsuarios">
-              Mostrar todos
-            </button>
-          </div>
+      <div class="card shadow-sm p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5>👥 Usuarios registrados</h5>
+          <button class="btn btn-sm btn-outline-light" type="button" id="toggleUsuarios">
+            Mostrar todos
+          </button>
+        </div>
 
-          <div id="usuariosContainer" style="max-height:250px; overflow-y:hidden; transition:all 0.3s ease;">
-            <table class="table table-dark table-hover align-middle mb-0 table-sm">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Nombre</th>
-                  <th>Correo</th>
-                  <th>País</th>
-                  <th>Saldo</th>
-                  <th>Última conexión</th>
-                  <th>Registro</th>
-                </tr>
-              </thead>
-              <tbody>
-                <% if (usuarios && usuarios.length > 0) { %>
-                  <% usuarios.forEach((u, index) => { %>
-                    <tr class="<%= index >= 5 ? 'extra-usuario d-none' : '' %>">
-                      <td><%= index + 1 %></td>
-                      <td><%= u.nombre %> <%= u.apellido %></td>
-                      <td><%= u.correo %></td>
-                      <td><%= u.pais || '-' %></td>
-                      <td>$<%= u.saldo || 0 %></td>
-                      <td>
-                        <% if (u.last_login) { %>
-                          <%= dayjs(u.last_login).format('DD/MM/YYYY HH:mm') %>
-                        <% } else { %>
-                          <span class="text-secondary">Nunca</span>
-                        <% } %>
-                      </td>
-                      <td><%= dayjs(u.created_at).format('DD/MM/YYYY') %></td>
-                    </tr>
-                  <% }) %>
-                <% } else { %>
-                  <tr>
-                    <td colspan="7" class="text-center text-secondary py-3">
-                      Sin usuarios registrados
+        <div id="usuariosContainer" style="max-height:250px; overflow-y:hidden; transition:all 0.3s ease;">
+          <table class="table table-dark table-hover align-middle mb-0 table-sm">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Correo</th>
+                <th>País</th>
+                <th>Saldo</th>
+                <th>Última conexión</th>
+                <th>Registro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (usuarios && usuarios.length > 0) { %>
+                <% usuarios.forEach((u, index) => { %>
+                  <tr class="<%= index >= 5 ? 'extra-usuario d-none' : '' %>">
+                    <td><%= index + 1 %></td>
+                    <td><%= u.nombre %> <%= u.apellido %></td>
+                    <td><%= u.correo %></td>
+                    <td><%= u.pais || '-' %></td>
+                    <td>$<%= u.saldo || 0 %></td>
+                    <td>
+                      <% if (u.last_login) { %>
+                        <%= dayjs(u.last_login).format('DD/MM/YYYY HH:mm') %>
+                      <% } else { %>
+                        <span class="text-secondary">Nunca</span>
+                      <% } %>
                     </td>
+                    <td><%= dayjs(u.created_at).format('DD/MM/YYYY') %></td>
                   </tr>
-                <% } %>
-              </tbody>
-            </table>
-          </div>
+                <% }) %>
+              <% } else { %>
+                <tr>
+                  <td colspan="7" class="text-center text-secondary py-3">
+                    Sin usuarios registrados
+                  </td>
+                </tr>
+              <% } %>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
 
     <!-- 🎬 GESTIÓN DE PLATAFORMAS -->
     <div class="col-lg-6">
-      <div class="card bg-dark border-secondary rounded-4 shadow">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="mb-1">🎬 Plataformas de Streaming</h5>
-            <p class="text-secondary mb-1">Administra las plataformas disponibles.</p>
-            <span class="badge bg-primary fs-6 mt-1">
-              <%= stats?.totalPlatforms || 0 %> plataformas
-            </span>
-          </div>
-          <a href="/admin/plataformas" class="btn btn-primary btn-lg px-4">
-            Ir a plataformas
-          </a>
+      <div class="card shadow-sm p-3 d-flex justify-content-between align-items-center flex-row">
+        <div>
+          <h5 class="mb-1">🎬 Plataformas de Streaming</h5>
+          <p class="text-secondary mb-1">Administra las plataformas disponibles.</p>
+          <span class="badge bg-primary fs-6 mt-1">
+            <%= stats?.totalPlatforms || 0 %> plataformas
+          </span>
         </div>
+        <a href="/admin/plataformas" class="btn btn-primary btn-lg px-4">
+          Ir a plataformas
+        </a>
       </div>
     </div>
 
     <!-- 📋 GESTIÓN DE CUENTAS -->
     <div class="col-lg-6">
-      <div class="card bg-dark border-secondary rounded-4 shadow">
-        <div class="card-body d-flex justify-content-between align-items-center">
-          <div>
-            <h5 class="mb-1">📋 Gestión de Cuentas</h5>
-            <p class="text-secondary mb-1">Administra correos, contraseñas y cupos.</p>
-            <span class="badge bg-danger fs-6 mt-1">
-              <%= stats?.totalAccounts || 0 %> cuentas
-            </span>
-          </div>
-          <a href="/admin/cuentas" class="btn btn-danger btn-lg px-4">
-            Ir a cuentas
-          </a>
+      <div class="card shadow-sm p-3 d-flex justify-content-between align-items-center flex-row">
+        <div>
+          <h5 class="mb-1">📋 Gestión de Cuentas</h5>
+          <p class="text-secondary mb-1">Administra correos, contraseñas y cupos.</p>
+          <span class="badge bg-danger fs-6 mt-1">
+            <%= stats?.totalAccounts || 0 %> cuentas
+          </span>
         </div>
+        <a href="/admin/cuentas" class="btn btn-danger btn-lg px-4">
+          Ir a cuentas
+        </a>
       </div>
     </div>
 
