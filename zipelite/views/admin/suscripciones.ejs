@@ -3,58 +3,55 @@
 
 <style>
   body {
-    background: linear-gradient(135deg, #0a0a0f 40%, #120028);
+    background-color: #0e0e12;
     color: #e0e0e0;
   }
 
   h2 {
     color: #fff;
-    text-shadow: 0 0 10px #ff003c, 0 0 20px #ff003c;
   }
 
-  .neon-box {
-    background: rgba(20, 20, 30, 0.85);
-    border: 1px solid rgba(255, 0, 60, 0.3);
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.3), 0 0 30px rgba(0, 150, 255, 0.2);
-    border-radius: 1rem;
+  .panel-box {
+    background: #1b1b22;
+    border: 1px solid #2a2a33;
+    border-radius: 0.75rem;
     padding: 1.5rem;
   }
 
-  .table-neon {
+  .table-clean {
     width: 100%;
-    background: rgba(15, 15, 25, 0.7);
+    background: #181820;
     border-collapse: collapse;
-    border-radius: 1rem;
+    border-radius: 0.75rem;
     overflow: hidden;
   }
 
-  .table-neon th {
-    color: #00eaff;
-    text-shadow: 0 0 10px #00eaff;
+  .table-clean th {
+    color: #00c8ff;
+    background: #20202a;
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .table-clean td {
+    color: #ddd;
+    padding: 0.75rem;
+    text-align: center;
+    border-top: 1px solid #2a2a33;
+  }
+
+  .table-clean tr:hover {
     background: rgba(255, 255, 255, 0.05);
-    padding: 0.75rem;
-    text-align: center;
-  }
-
-  .table-neon td {
-    color: #eee;
-    padding: 0.75rem;
-    text-align: center;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .table-neon tr:hover {
-    background: rgba(255, 0, 80, 0.15);
   }
 
   .badge {
-    padding: 0.4em 0.8em;
+    padding: 0.35em 0.7em;
     border-radius: 0.5em;
     font-weight: 600;
   }
 
-  .bg-success { background: #00ff7f; color: #000; }
-  .bg-danger { background: #ff003c; color: #fff; }
+  .bg-success { background: #28a745; color: #fff; }
+  .bg-danger { background: #dc3545; color: #fff; }
 
   .platform-logo {
     height: 40px;
@@ -62,23 +59,22 @@
   }
 
   .user-email {
-    color: #00eaff;
+    color: #00c8ff;
   }
 
-  .btn-neon {
-    background: linear-gradient(90deg, #ff003c, #ff6a00);
+  .btn-primary-custom {
+    background: #ff003c;
     border: none;
     color: #fff;
     padding: 0.6rem 1.2rem;
     border-radius: 0.5rem;
     font-weight: 600;
-    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
     transition: transform 0.2s, box-shadow 0.3s;
   }
 
-  .btn-neon:hover {
+  .btn-primary-custom:hover {
     transform: scale(1.05);
-    box-shadow: 0 0 20px rgba(255, 0, 60, 0.6);
+    box-shadow: 0 0 10px rgba(255, 0, 60, 0.4);
   }
 
   /* 🔍 Barra de búsqueda */
@@ -92,8 +88,8 @@
 
   .search-input {
     flex: 1;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: #1e1e28;
+    border: 1px solid #333;
     border-radius: 0.5rem;
     color: #fff;
     padding: 0.6rem 1rem;
@@ -103,7 +99,6 @@
   .search-input:focus {
     outline: none;
     border-color: #ff003c;
-    box-shadow: 0 0 10px #ff003c;
   }
 
   .contador {
@@ -112,9 +107,9 @@
   }
 
   .toggle-btn {
-    background: rgba(0, 255, 255, 0.2);
-    border: 1px solid #00eaff;
-    color: #00eaff;
+    background: #1b1b22;
+    border: 1px solid #00c8ff;
+    color: #00c8ff;
     padding: 0.5rem 1rem;
     border-radius: 0.5rem;
     cursor: pointer;
@@ -122,15 +117,14 @@
   }
 
   .toggle-btn:hover {
-    background: rgba(0, 255, 255, 0.4);
-    box-shadow: 0 0 15px #00eaff;
+    background: rgba(0, 200, 255, 0.2);
   }
 </style>
 
 <div class="container mt-5">
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
     <h2 class="fw-bold mb-3 mb-md-0">📊 Suscripciones registradas</h2>
-    <a href="/admin/panel" class="btn-neon">⬅ Volver al Panel</a>
+    <a href="/admin/panel" class="btn-primary-custom">⬅ Volver al Panel</a>
   </div>
 
   <!-- 🔍 Barra de búsqueda + controles -->
@@ -147,10 +141,10 @@
     </span>
   </div>
 
-  <div class="neon-box">
+  <div class="panel-box">
     <% if (subs && subs.length > 0) { %>
       <div class="table-responsive">
-        <table class="table-neon" id="tablaSubs">
+        <table class="table-clean" id="tablaSubs">
           <thead>
             <tr>
               <th>#</th>
