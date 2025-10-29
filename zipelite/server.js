@@ -316,24 +316,41 @@ app.post(
 app.use(adminAccountsRoutes);
 app.use(adminPlatformsRoutes);
 
-// ───────────────────────────────────────────────────────────────────────────────
-// 👤 Panel de usuario
-// ───────────────────────────────────────────────────────────────────────────────
+// 👤 Panel de usuario con disponibilidad de cupos
 app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.session.user.id).lean();
     const platforms = await Platform.find({ available: true }).sort({ name: 1 }).lean();
 
+    // ✅ Actualizar suscripciones vencidas
     const ahora = new Date();
     const todasSubs = await Subscription.find({ userId: user._id }).lean();
-
-    // marcar vencidas
     for (const s of todasSubs) {
       if (s.activa && s.fechaFin && s.fechaFin < ahora) {
         await Subscription.updateOne({ _id: s._id }, { $set: { activa: false } });
       }
     }
 
+    // ✅ Consultar cuentas activas y calcular disponibilidad por plataforma
+    const cuentas = await Account.find({ activa: true }).lean();
+    const disponibilidad = {};
+    for (const c of cuentas) {
+      const disponibles = Math.max(c.cupos || 0, 0);
+      const id = c.plataformaId?.toString() || c.plataforma?.toString();
+      if (!id) continue;
+      disponibilidad[id] = (disponibilidad[id] || 0) + disponibles;
+    }
+
+    // ✅ Agregar campo cuposDisponibles a cada plataforma
+    const productos = platforms.map(p => ({
+      _id: p._id,
+      nombre: p.name,
+      logo: p.logoUrl,
+      precios: p.precios || {},
+      cuposDisponibles: disponibilidad[p._id.toString()] || 0,
+    }));
+
+    // ✅ Separar suscripciones
     const subsActivas = await Subscription.find({ userId: user._id, activa: true })
       .populate('platformId')
       .sort({ fechaFin: -1 })
@@ -343,13 +360,6 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       .populate('platformId')
       .sort({ fechaFin: -1 })
       .lean();
-
-    const productos = platforms.map(p => ({
-      _id: p._id,
-      nombre: p.name,
-      logo: p.logoUrl,
-      precios: p.precios || {},
-    }));
 
     res.render('panel', {
       csrfToken: req.csrfToken(),
@@ -365,6 +375,7 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
     res.redirect('/login?error=Reinicia tu sesión');
   }
 });
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // 🎬 Detalle de plataforma
