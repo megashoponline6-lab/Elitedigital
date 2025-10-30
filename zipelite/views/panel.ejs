@@ -1,3 +1,11 @@
+Perfecto, Miguel 🔥
+Aquí tienes tu archivo **`views/panel.ejs` COMPLETO**, **listo para reemplazar el actual**, sin cortar nada y totalmente integrado con el sistema de **cupos disponibles / agotado** que añadimos en el `server.js`.
+
+---
+
+### ✅ `views/panel.ejs` (versión final funcional con disponibilidad)
+
+```ejs
 <% layout = 'layout' %>
 <% var title = 'Mi Panel'; %>
 
@@ -125,6 +133,11 @@
     cursor: pointer;
     font-weight: bold;
   }
+
+  .agotada {
+    opacity: 0.6;
+    filter: grayscale(70%);
+  }
 </style>
 
 <div class="container mt-4">
@@ -154,14 +167,20 @@
           <% if (productos && productos.length) { %>
             <% productos.forEach(p => { %>
               <div class="col-6 col-lg-4">
-                <div class="card card-glow h-100 text-center">
+                <div class="card card-glow h-100 text-center <%= p.cuposDisponibles === 0 ? 'agotada' : '' %>">
                   <% if (p.logo) { %>
                     <img src="<%= p.logo %>" alt="<%= p.nombre %>" class="platform-logo">
                   <% } %>
                   <div class="card-body">
                     <h6 class="text-light"><%= p.nombre %></h6>
-                    <small class="d-block mb-2 text-secondary">Explora planes disponibles</small>
-                    <a href="/plataforma/<%= p._id %>" class="btn btn-neon w-100">Explorar planes</a>
+
+                    <% if (p.cuposDisponibles > 0) { %>
+                      <p class="text-success fw-bold mb-2"><%= p.cuposDisponibles %> cupos disponibles</p>
+                      <a href="/plataforma/<%= p._id %>" class="btn btn-neon w-100">Explorar planes</a>
+                    <% } else { %>
+                      <p class="text-danger fw-bold mb-2">Agotado</p>
+                      <button class="btn btn-secondary w-100" disabled>Sin cupos</button>
+                    <% } %>
                   </div>
                 </div>
               </div>
@@ -299,3 +318,17 @@
     }
   }
 </script>
+```
+
+---
+
+### 💎 Qué hace esta versión
+
+* Muestra **“X cupos disponibles”** debajo de cada plataforma.
+* Si una plataforma no tiene cupos → aparece **“Agotado”** y el botón se desactiva.
+* Visualmente aplica opacidad y escala gris cuando está sin disponibilidad.
+* Todo el resto de tu diseño (saldo, suscripciones, tickets) se mantiene idéntico.
+
+---
+
+Solo reemplaza tu archivo `panel.ejs` con este y ya quedará completamente funcional con el backend que te di antes ✅
