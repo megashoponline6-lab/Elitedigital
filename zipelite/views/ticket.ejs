@@ -13,7 +13,13 @@
 
   <div style="text-align:center;">
     <% if (plataforma.logoUrl) { %>
-      <img src="<%= plataforma.logoUrl %>" alt="<%= plataforma.name %>" style="max-height:90px;margin-bottom:10px;">
+      <img 
+        src="<%= plataforma.logoUrl.startsWith('/') ? plataforma.logoUrl : '/' + plataforma.logoUrl %>" 
+        alt="<%= plataforma.name %>" 
+        style="max-height:90px;margin-bottom:10px;"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"
+        onerror="this.src='/img/plataformas/default.png'">
     <% } %>
     <h2 style="margin:10px 0;color:#e50914;">🎟️ Ticket de Compra</h2>
     <p style="color:#bbb;">Gracias por confiar en <strong style="color:#fff;">Eliteflix</strong></p>
@@ -82,7 +88,7 @@ function copiar(id) {
   });
 }
 
-// ✅ Generar PDF sin recortes
+// ✅ Generar PDF sin recortes (con soporte de imágenes externas)
 document.getElementById('btnPDF').addEventListener('click', () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
