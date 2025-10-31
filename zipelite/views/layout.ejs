@@ -14,7 +14,7 @@
   <!-- ✅ Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
 
-  <!-- ✅ Estilos personalizados (sin /public) -->
+  <!-- ✅ Estilos personalizados -->
   <link href="/css/style.css" rel="stylesheet">
 </head>
 
@@ -30,11 +30,12 @@
       </button>
 
       <div class="collapse navbar-collapse" id="nav">
-        <ul class="navbar-nav me-auto">
+        <!-- ❌ Catálogo eliminado -->
+        <!-- <ul class="navbar-nav me-auto">
           <li class="nav-item"><a class="nav-link" href="/catalogo">Catálogo</a></li>
-        </ul>
+        </ul> -->
 
-        <ul class="navbar-nav">
+        <ul class="navbar-nav ms-auto">
           <% if (sess && sess.user) { %>
             <li class="nav-item"><a class="nav-link" href="/panel">Mi Panel</a></li>
             <li class="nav-item"><a class="nav-link" href="/logout">Salir</a></li>
