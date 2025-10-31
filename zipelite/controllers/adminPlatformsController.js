@@ -1,4 +1,4 @@
-// ✅ controllers/adminPlatformsController.js — versión final, coherente con modelo Platform y vista admin-platforms.ejs
+// ✅ controllers/adminPlatformsController.js — versión final y funcional
 import Platform from '../models/Platform.js';
 import Account from '../models/Account.js';
 
@@ -27,15 +27,29 @@ export const view = async (req, res) => {
 };
 
 /**
- * ➕ Crear plataforma (sin guardar imágenes)
+ * ➕ Crear plataforma (normaliza ruta del logo)
  */
 export const create = async (req, res) => {
   try {
     const { name, logoUrl } = req.body;
     if (!name) return res.redirect('/admin/plataformas?error=Falta el nombre');
 
-    // Si no se especifica logo, usar uno por defecto
-    const finalLogoUrl = logoUrl?.trim() || '/img/plataformas/default.png';
+    // 🧩 Normalizar ruta del logo
+    let finalLogoUrl = (logoUrl || '').trim();
+
+    if (!finalLogoUrl) {
+      finalLogoUrl = '/img/plataformas/default.png';
+    } else {
+      // Si empieza con "public/", lo reemplazamos por "/"
+      if (finalLogoUrl.startsWith('public/')) {
+        finalLogoUrl = finalLogoUrl.replace(/^public\//, '/');
+      }
+
+      // Si no empieza con "/", se lo agregamos
+      if (!finalLogoUrl.startsWith('/')) {
+        finalLogoUrl = '/' + finalLogoUrl;
+      }
+    }
 
     await Platform.create({ name, logoUrl: finalLogoUrl, available: true });
     console.log(`✅ Plataforma creada: ${name} (${finalLogoUrl})`);
@@ -47,7 +61,7 @@ export const create = async (req, res) => {
 };
 
 /**
- * 🔁 Actualizar plataforma (solo texto/ruta del logo)
+ * 🔁 Actualizar plataforma (normaliza ruta del logo)
  */
 export const update = async (req, res) => {
   try {
@@ -56,7 +70,17 @@ export const update = async (req, res) => {
 
     // Actualizar logo si se envía uno nuevo
     if (req.body.logoUrl && req.body.logoUrl.trim() !== '') {
-      platform.logoUrl = req.body.logoUrl.trim();
+      let newLogo = req.body.logoUrl.trim();
+
+      // Normalizar ruta igual que en "create"
+      if (newLogo.startsWith('public/')) {
+        newLogo = newLogo.replace(/^public\//, '/');
+      }
+      if (!newLogo.startsWith('/')) {
+        newLogo = '/' + newLogo;
+      }
+
+      platform.logoUrl = newLogo;
     }
 
     // Actualizar disponibilidad si aplica
