@@ -305,7 +305,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // 🕐 Esperar imágenes cargadas antes de ajustar
+    // ✅ Esperar que las imágenes se carguen correctamente
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -313,32 +313,34 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 🎨 Reajustar logos grandes (solo vista previa)
+    // 🎨 Ajuste suave SOLO visual (no afecta el PDF)
     imgs.forEach(img => {
-      if (img.naturalWidth > 400 || img.naturalHeight > 150) {
-        img.removeAttribute('style'); // elimina estilos inline del ticket
-        img.style.setProperty('max-height', '120px', 'important');
-        img.style.setProperty('width', 'auto', 'important');
-        img.style.setProperty('height', 'auto', 'important');
-        img.style.setProperty('display', 'block', 'important');
-        img.style.setProperty('margin', '0 auto 10px', 'important');
-        img.style.setProperty('object-fit', 'contain', 'important');
+      // Detectar si el logo es muy alto o ancho
+      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+        img.style.maxHeight = '120px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        img.style.display = 'block';
+        img.style.margin = '0 auto 10px';
       }
     });
 
-    // 🔧 Reinyectar los scripts del ticket (como html2pdf)
+    // 🔧 Ejecutar los scripts embebidos del ticket (html2pdf, etc.)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
-      if (oldScript.src) newScript.src = oldScript.src;
-      else newScript.textContent = oldScript.textContent;
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
       document.body.appendChild(newScript);
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Error al cargar el ticket:', err);
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
 </script>
-
