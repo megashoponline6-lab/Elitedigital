@@ -341,3 +341,26 @@ async function verTicket(id) {
   }
 }
 </script>
+<script>
+// ✅ Forzar ajuste visual de logos grandes dentro del modal después del render final
+const ajustarLogosModal = () => {
+  const imgs = document.querySelectorAll('#modalTicket img');
+  imgs.forEach(img => {
+    // Espera un breve tiempo para asegurarse de que se pinten
+    setTimeout(() => {
+      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+        img.style.setProperty('max-height', '120px', 'important');
+        img.style.setProperty('width', 'auto', 'important');
+        img.style.setProperty('height', 'auto', 'important');
+        img.style.setProperty('display', 'block', 'important');
+        img.style.setProperty('margin', '0 auto 10px', 'important');
+        img.style.setProperty('object-fit', 'contain', 'important');
+      }
+    }, 150);
+  });
+};
+
+// 👁️ Detectar cada vez que se inserte un nuevo ticket en el modal
+const observerModal = new MutationObserver(() => ajustarLogosModal());
+observerModal.observe(document.getElementById('contenidoTicket'), { childList: true, subtree: true });
+</script>
