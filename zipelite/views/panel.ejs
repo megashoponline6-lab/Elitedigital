@@ -291,22 +291,36 @@
 </div>
 
 <script>
-  const modal = document.getElementById('modalTicket');
-  const modalContent = document.getElementById('contenidoTicket');
-  const cerrar = document.getElementById('cerrarModal');
+const modal = document.getElementById('modalTicket');
+const modalContent = document.getElementById('contenidoTicket');
+const cerrar = document.getElementById('cerrarModal');
 
-  cerrar.addEventListener('click', () => modal.style.display = 'none');
+cerrar.addEventListener('click', () => modal.style.display = 'none');
 
-  async function verTicket(id) {
-    modal.style.display = 'flex';
-    modalContent.innerHTML = '<p style="text-align:center;">⏳ Cargando ticket...</p>';
+async function verTicket(id) {
+  modal.style.display = 'flex';
+  modalContent.innerHTML = '<p style="text-align:center;">⏳ Cargando ticket...</p>';
 
-    try {
-      const res = await fetch(`/ticket/${id}`);
-      const html = await res.text();
-      modalContent.innerHTML = html;
-    } catch (err) {
-      modalContent.innerHTML = '<p style="color:red;">Error al cargar el ticket.</p>';
-    }
+  try {
+    const res = await fetch(`/ticket/${id}`);
+    const html = await res.text();
+    modalContent.innerHTML = html;
+
+    // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
+    const scripts = modalContent.querySelectorAll("script");
+    scripts.forEach(oldScript => {
+      const newScript = document.createElement("script");
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
+      document.body.appendChild(newScript);
+    });
+
+  } catch (err) {
+    console.error(err);
+    modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
+}
 </script>
