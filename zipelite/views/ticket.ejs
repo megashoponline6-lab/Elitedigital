@@ -88,21 +88,46 @@ function copiar(id) {
   });
 }
 
-// ✅ Generar PDF sin recortes (con soporte de imágenes externas)
-document.getElementById('btnPDF').addEventListener('click', () => {
+// ✅ Generar PDF sin recortes, compatible con móvil, PC y tablets
+document.getElementById('btnPDF').addEventListener('click', async () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
   const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
 
+  // Esperar que las imágenes carguen
+  const imagenes = ticket.querySelectorAll('img');
+  await Promise.all(Array.from(imagenes).map(img => new Promise(resolve => {
+    if (img.complete) return resolve();
+    img.onload = resolve;
+    img.onerror = () => {
+      img.src = '/img/plataformas/default.png';
+      resolve();
+    };
+  })));
+
+  // Forzar scroll arriba (evita recorte en móviles)
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // Configuración ajustada
   const opt = {
     margin: 0.3,
     filename: nombreArchivo,
-    image: { type: 'jpeg', quality: 1 },
-    html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+    image: { type: 'jpeg', quality: 0.95 },
+    html2canvas: {
+      scale: window.innerWidth < 768 ? 2 : 3, // móviles usan menos escala
+      useCORS: true,
+      allowTaint: false,
+      scrollY: 0,
+      backgroundColor: '#121212'
+    },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
-  window.scrollTo(0, 0);
-  html2pdf().from(ticket).set(opt).save();
+  try {
+    await html2pdf().set(opt).from(ticket).save();
+  } catch (err) {
+    console.error('Error al generar PDF:', err);
+    alert('Hubo un error al generar el PDF. Intenta de nuevo.');
+  }
 });
 </script>
