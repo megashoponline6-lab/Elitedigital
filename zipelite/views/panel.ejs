@@ -306,6 +306,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
+    // 🕐 Esperar imágenes antes de aplicar ajustes
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -313,22 +314,25 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // ✅ Ajustar logos grandes sin afectar PDF
+    // ⚡ Reescribir estilos inline de logos grandes
     imgs.forEach(img => {
-      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
-        img.style.setProperty('max-height', '120px', 'important');
-        img.style.setProperty('width', 'auto', 'important');
-        img.style.setProperty('height', 'auto', 'important');
-        img.style.setProperty('display', 'block', 'important');
-        img.style.setProperty('margin', '0 auto 10px', 'important');
-        img.style.setProperty('object-fit', 'contain', 'important');
+      const ancho = img.naturalWidth;
+      const alto = img.naturalHeight;
+      if (ancho > 600 || alto > 200) {
+        img.removeAttribute("style"); // borra los estilos inline viejos
+        img.style.setProperty("max-height", "120px", "important");
+        img.style.setProperty("width", "auto", "important");
+        img.style.setProperty("height", "auto", "important");
+        img.style.setProperty("display", "block", "important");
+        img.style.setProperty("margin", "0 auto 10px", "important");
+        img.style.setProperty("object-fit", "contain", "important");
       }
     });
 
-    // 🔁 Reejecutar script html2pdf sin romper la vista
-    const scripts = modalContent.querySelectorAll('script');
+    // 🧩 Reinyectar scripts embebidos (html2pdf, etc.)
+    const scripts = modalContent.querySelectorAll("script");
     for (const oldScript of scripts) {
-      const newScript = document.createElement('script');
+      const newScript = document.createElement("script");
       if (oldScript.src) newScript.src = oldScript.src;
       else newScript.textContent = oldScript.textContent;
       document.body.appendChild(newScript);
@@ -339,4 +343,24 @@ async function verTicket(id) {
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
+
+// 👁️ Reajustar si el ticket cambia o se recarga
+const observer = new MutationObserver(() => {
+  const imgs = modalContent.querySelectorAll('img');
+  imgs.forEach(img => {
+    const ancho = img.naturalWidth;
+    const alto = img.naturalHeight;
+    if (ancho > 600 || alto > 200) {
+      img.removeAttribute("style");
+      img.style.setProperty("max-height", "120px", "important");
+      img.style.setProperty("width", "auto", "important");
+      img.style.setProperty("height", "auto", "important");
+      img.style.setProperty("display", "block", "important");
+      img.style.setProperty("margin", "0 auto 10px", "important");
+      img.style.setProperty("object-fit", "contain", "important");
+    }
+  });
+});
+observer.observe(modalContent, { childList: true, subtree: true });
 </script>
+
