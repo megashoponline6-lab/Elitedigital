@@ -305,7 +305,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // ✅ Esperar imágenes antes de mostrar
+    // 🕐 Esperar imágenes cargadas antes de ajustar
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -313,27 +313,25 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // ✅ Ajuste SUAVE para logos grandes solo en vista previa del modal
+    // 🎨 Reajustar logos grandes (solo vista previa)
     imgs.forEach(img => {
-      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
-        img.style.maxHeight = '120px';
-        img.style.width = 'auto';
-        img.style.height = 'auto';
-        img.style.display = 'block';
-        img.style.margin = '0 auto 10px';
-        img.style.objectFit = 'contain';
+      if (img.naturalWidth > 400 || img.naturalHeight > 150) {
+        img.removeAttribute('style'); // elimina estilos inline del ticket
+        img.style.setProperty('max-height', '120px', 'important');
+        img.style.setProperty('width', 'auto', 'important');
+        img.style.setProperty('height', 'auto', 'important');
+        img.style.setProperty('display', 'block', 'important');
+        img.style.setProperty('margin', '0 auto 10px', 'important');
+        img.style.setProperty('object-fit', 'contain', 'important');
       }
     });
 
-    // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
+    // 🔧 Reinyectar los scripts del ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
-      }
+      if (oldScript.src) newScript.src = oldScript.src;
+      else newScript.textContent = oldScript.textContent;
       document.body.appendChild(newScript);
     });
 
@@ -343,3 +341,4 @@ async function verTicket(id) {
   }
 }
 </script>
+
