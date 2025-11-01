@@ -305,7 +305,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // ✅ Esperar que las imágenes se carguen correctamente
+    // ✅ Esperar imágenes antes de mostrar el ticket
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -313,9 +313,8 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 🎨 Ajuste suave SOLO visual (no afecta el PDF)
+    // 🎨 Ajuste de logos grandes solo en la vista previa del modal
     imgs.forEach(img => {
-      // Detectar si el logo es muy alto o ancho
       if (img.naturalWidth > 600 || img.naturalHeight > 200) {
         img.style.maxHeight = '120px';
         img.style.width = 'auto';
@@ -326,7 +325,7 @@ async function verTicket(id) {
       }
     });
 
-    // 🔧 Ejecutar los scripts embebidos del ticket (html2pdf, etc.)
+    // 🔧 Reejecutar los scripts embebidos (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
@@ -338,9 +337,18 @@ async function verTicket(id) {
       document.body.appendChild(newScript);
     });
 
+    // 🛡️ Seguridad contra fondo negro (mantiene color fijo durante la captura)
+    const styleFix = document.createElement('style');
+    styleFix.innerHTML = `
+      html, body { background: #121212 !important; overflow: auto !important; }
+      canvas { background-color: #121212 !important; }
+    `;
+    document.head.appendChild(styleFix);
+
   } catch (err) {
     console.error('Error al cargar el ticket:', err);
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
 </script>
+
