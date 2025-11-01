@@ -344,4 +344,23 @@ async function verTicket(id) {
   }
 }
 </script>
+<script>
+// ✅ Reajustar logos grandes visualmente después de cargar el ticket
+const observerLogos = new MutationObserver(() => {
+  const imgs = modalContent.querySelectorAll('img');
+  imgs.forEach(img => {
+    if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+      img.style.setProperty('max-height', '110px', 'important');
+      img.style.setProperty('width', 'auto', 'important');
+      img.style.setProperty('height', 'auto', 'important');
+      img.style.setProperty('display', 'block', 'important');
+      img.style.setProperty('margin', '0 auto 10px', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
+    }
+  });
+});
+
+// 👁️ Observa los cambios en el contenido del modal
+observerLogos.observe(modalContent, { childList: true, subtree: true });
+</script>
 
