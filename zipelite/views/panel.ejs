@@ -290,6 +290,18 @@
   </div>
 </div>
 
+<!-- 🎨 Ajuste visual para logos grandes dentro del modal -->
+<style>
+  #modalTicket img {
+    max-height: 110px !important;
+    width: auto !important;
+    height: auto !important;
+    display: block !important;
+    margin: 0 auto 10px !important;
+    object-fit: contain !important;
+  }
+</style>
+
 <script>
 const modal = document.getElementById('modalTicket');
 const modalContent = document.getElementById('contenidoTicket');
@@ -306,7 +318,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // Esperar que las imágenes carguen completamente
+    // 🧠 Esperar que las imágenes carguen antes de mostrar
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -314,22 +326,7 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 🧠 Ajustar visualmente logos grandes solo en la vista previa (sin romper el PDF)
-    imgs.forEach(img => {
-      img.removeAttribute('width');
-      img.removeAttribute('height');
-      img.dataset.original = img.src; // guardamos su fuente original para restaurar en PDF
-      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
-        img.style.maxHeight = '110px';
-        img.style.width = 'auto';
-        img.style.height = 'auto';
-        img.style.objectFit = 'contain';
-        img.style.display = 'block';
-        img.style.margin = '0 auto 10px';
-      }
-    });
-
-    // Re-ejecutar scripts embebidos del ticket
+    // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
@@ -346,68 +343,5 @@ async function verTicket(id) {
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
-
-// ✅ Sistema PDF mejorado (restaura fondo y logos antes de html2pdf)
-async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
-  const imgs = elemento.querySelectorAll('img');
-  await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
-    if (img.complete) return resolve();
-    img.onload = resolve;
-    img.onerror = resolve;
-  })));
-  await new Promise(r => setTimeout(r, tiempoExtra));
-}
-
-const observer = new MutationObserver(async (mutations) => {
-  for (const mutation of mutations) {
-    if (mutation.addedNodes.length) {
-      const btn = modalContent.querySelector('#btnPDF');
-      const ticket = modalContent.querySelector('#ticket');
-      if (btn && ticket) {
-        btn.onclick = async () => {
-          try {
-            await esperarRenderCompleto(ticket, 500);
-
-            // ✅ Restaurar fondo y contexto antes del PDF
-            ticket.style.backgroundColor = '#121212';
-            ticket.style.color = '#fff';
-            ticket.style.transform = 'none';
-            ticket.style.opacity = '1';
-            document.body.style.backgroundColor = '#121212';
-
-            // ✅ Restaurar los logos a su src original antes del canvas
-            const imagenes = ticket.querySelectorAll('img');
-            for (const img of imagenes) {
-              if (img.dataset.original) img.src = img.dataset.original;
-            }
-
-            // ✅ Conversión segura para PDF
-            const isMobile = window.innerWidth < 768;
-            const opt = {
-              margin: 0.3,
-              filename: `Ticket_${new Date().toISOString().slice(0, 10)}.pdf`,
-              image: { type: 'jpeg', quality: 0.97 },
-              html2canvas: {
-                scale: isMobile ? 2 : 3,
-                useCORS: true,
-                allowTaint: false,
-                removeContainer: true,
-                scrollY: 0,
-                backgroundColor: '#121212',
-                logging: false
-              },
-              jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-            };
-
-            await html2pdf().set(opt).from(ticket).save();
-          } catch (err) {
-            console.error('Error al generar PDF:', err);
-            alert('Hubo un error al generar el PDF. Intenta de nuevo.');
-          }
-        };
-      }
-    }
-  }
-});
-observer.observe(modalContent, { childList: true, subtree: true });
 </script>
+
