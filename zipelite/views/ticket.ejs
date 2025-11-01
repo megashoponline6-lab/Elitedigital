@@ -80,6 +80,9 @@
 <!-- 📦 Librería para convertir HTML a PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+<!-- 📦 Librería para convertir HTML a PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
 function copiar(id) {
   const texto = document.getElementById(id).innerText.trim();
@@ -88,7 +91,7 @@ function copiar(id) {
   });
 }
 
-// ✅ Generar PDF sin recortes y corrigiendo logos grandes en móviles
+// ✅ Generar PDF con ajuste real de logos grandes
 document.getElementById('btnPDF').addEventListener('click', async () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
@@ -99,27 +102,27 @@ document.getElementById('btnPDF').addEventListener('click', async () => {
   await Promise.all(Array.from(imagenes).map(img => new Promise(resolve => {
     if (img.complete) return resolve();
     img.onload = resolve;
-    img.onerror = () => {
-      img.src = '/img/plataformas/default.png';
-      resolve();
-    };
+    img.onerror = () => resolve();
   })));
 
-  // 🔧 Ajustar logos grandes antes de generar PDF
-  imagenes.forEach(img => {
-    const naturalW = img.naturalWidth;
-    const naturalH = img.naturalHeight;
-    if (naturalW > 400) {
-      const ratio = 400 / naturalW;
-      img.style.width = (naturalW * ratio) + 'px';
-      img.style.height = 'auto';
+  // 🔧 Redimensionar físicamente los logos grandes (ya no solo con CSS)
+  for (const img of imagenes) {
+    const maxW = 400; // ancho máximo permitido
+    if (img.naturalWidth > maxW) {
+      const ratio = maxW / img.naturalWidth;
+      const canvas = document.createElement('canvas');
+      canvas.width = maxW;
+      canvas.height = img.naturalHeight * ratio;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = canvas.toDataURL('image/png'); // reemplaza con imagen más chica
+      await new Promise(r => setTimeout(r, 50)); // pequeña pausa para asegurar carga
     }
-  });
+  }
 
   // Forzar scroll arriba (evita recortes)
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  // Configuración completa optimizada para laptop y celular
   const isMobile = window.innerWidth < 768;
   const opt = {
     margin: 0.3,
@@ -145,3 +148,4 @@ document.getElementById('btnPDF').addEventListener('click', async () => {
   }
 });
 </script>
+
