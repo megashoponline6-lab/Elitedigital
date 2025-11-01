@@ -289,7 +289,6 @@
     <div id="contenidoTicket">Cargando...</div>
   </div>
 </div>
-
 <script>
 const modal = document.getElementById('modalTicket');
 const modalContent = document.getElementById('contenidoTicket');
@@ -306,7 +305,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // 🕐 Esperar imágenes antes de aplicar ajustes
+    // ✅ Esperar imágenes antes de mostrar
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -314,53 +313,33 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // ⚡ Reescribir estilos inline de logos grandes
+    // ✅ Ajuste SUAVE para logos grandes solo en vista previa del modal
     imgs.forEach(img => {
-      const ancho = img.naturalWidth;
-      const alto = img.naturalHeight;
-      if (ancho > 600 || alto > 200) {
-        img.removeAttribute("style"); // borra los estilos inline viejos
-        img.style.setProperty("max-height", "120px", "important");
-        img.style.setProperty("width", "auto", "important");
-        img.style.setProperty("height", "auto", "important");
-        img.style.setProperty("display", "block", "important");
-        img.style.setProperty("margin", "0 auto 10px", "important");
-        img.style.setProperty("object-fit", "contain", "important");
+      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+        img.style.maxHeight = '120px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '0 auto 10px';
+        img.style.objectFit = 'contain';
       }
     });
 
-    // 🧩 Reinyectar scripts embebidos (html2pdf, etc.)
+    // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
-    for (const oldScript of scripts) {
+    scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
-      if (oldScript.src) newScript.src = oldScript.src;
-      else newScript.textContent = oldScript.textContent;
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
       document.body.appendChild(newScript);
-    }
+    });
 
   } catch (err) {
     console.error(err);
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
-
-// 👁️ Reajustar si el ticket cambia o se recarga
-const observer = new MutationObserver(() => {
-  const imgs = modalContent.querySelectorAll('img');
-  imgs.forEach(img => {
-    const ancho = img.naturalWidth;
-    const alto = img.naturalHeight;
-    if (ancho > 600 || alto > 200) {
-      img.removeAttribute("style");
-      img.style.setProperty("max-height", "120px", "important");
-      img.style.setProperty("width", "auto", "important");
-      img.style.setProperty("height", "auto", "important");
-      img.style.setProperty("display", "block", "important");
-      img.style.setProperty("margin", "0 auto 10px", "important");
-      img.style.setProperty("object-fit", "contain", "important");
-    }
-  });
-});
-observer.observe(modalContent, { childList: true, subtree: true });
 </script>
-
