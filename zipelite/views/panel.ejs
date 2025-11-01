@@ -323,4 +323,95 @@ async function verTicket(id) {
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
+// 🧠 Mejora: Esperar render completo y aplicar el mismo sistema de PDF estable
+async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
+  const imgs = elemento.querySelectorAll('img');
+  await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
+    if (img.complete) return resolve();
+    img.onload = resolve;
+    img.onerror = resolve;
+  })));
+  await new Promise(r => setTimeout(r, tiempoExtra));
+}
+
+// 🎟️ Detectar ticket cargado y aplicar script avanzado
+const observer = new MutationObserver(async (mutations) => {
+  for (const mutation of mutations) {
+    if (mutation.addedNodes.length) {
+      const btn = modalContent.querySelector('#btnPDF');
+      const ticket = modalContent.querySelector('#ticket');
+      if (btn && ticket) {
+        // Evitar múltiples listeners
+        btn.onclick = async () => {
+          try {
+            await esperarRenderCompleto(ticket, 500);
+
+            // Convertir imágenes externas grandes a base64 seguras
+            const imagenes = ticket.querySelectorAll('img');
+            for (const img of imagenes) {
+              try {
+                const response = await fetch(img.src, { mode: 'cors' });
+                const blob = await response.blob();
+
+                const objectURL = URL.createObjectURL(blob);
+                const tempImg = await new Promise((resolve) => {
+                  const i = new Image();
+                  i.onload = () => resolve(i);
+                  i.src = objectURL;
+                });
+
+                const maxW = 400;
+                let newW = tempImg.width;
+                let newH = tempImg.height;
+                if (newW > maxW) {
+                  const ratio = maxW / newW;
+                  newW *= ratio;
+                  newH *= ratio;
+                }
+
+                const canvas = document.createElement('canvas');
+                canvas.width = newW;
+                canvas.height = newH;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(tempImg, 0, 0, newW, newH);
+                img.src = canvas.toDataURL('image/png');
+                URL.revokeObjectURL(objectURL);
+              } catch (e) {
+                console.warn('No se pudo convertir la imagen:', img.src, e);
+              }
+            }
+
+            window.scrollTo({ top: 0, behavior: 'instant' });
+
+            const isMobile = window.innerWidth < 768;
+            const opt = {
+              margin: 0.3,
+              filename: `Ticket_${new Date().toISOString().slice(0, 10)}.pdf`,
+              image: { type: 'jpeg', quality: 0.97 },
+              html2canvas: {
+                scale: isMobile ? 2 : 3,
+                useCORS: true,
+                allowTaint: false,
+                removeContainer: true,
+                scrollY: 0,
+                backgroundColor: '#121212',
+                logging: false
+              },
+              jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            await html2pdf().set(opt).from(ticket).save();
+          } catch (err) {
+            console.error('Error al generar PDF:', err);
+            alert('Hubo un error al generar el PDF. Intenta de nuevo.');
+          }
+        };
+      }
+    }
+  }
+});
+
+// 🔎 Observar el contenido del modal (detecta cuando carga el ticket)
+observer.observe(modalContent, { childList: true, subtree: true });
+
 </script>
