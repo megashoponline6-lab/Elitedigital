@@ -88,13 +88,13 @@ function copiar(id) {
   });
 }
 
-// ✅ Generar PDF sin recortes, compatible con móvil, PC y tablets
+// ✅ Generar PDF sin recortes, corrigiendo el color en móviles sin reducir nada
 document.getElementById('btnPDF').addEventListener('click', async () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
   const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
 
-  // Esperar que las imágenes carguen
+  // Esperar que todas las imágenes estén cargadas
   const imagenes = ticket.querySelectorAll('img');
   await Promise.all(Array.from(imagenes).map(img => new Promise(resolve => {
     if (img.complete) return resolve();
@@ -105,20 +105,23 @@ document.getElementById('btnPDF').addEventListener('click', async () => {
     };
   })));
 
-  // Forzar scroll arriba (evita recorte en móviles)
+  // Forzar scroll arriba (evita recortes)
   window.scrollTo({ top: 0, behavior: 'instant' });
 
-  // Configuración ajustada
+  // Configuración completa optimizada para laptop y celular
+  const isMobile = window.innerWidth < 768;
   const opt = {
     margin: 0.3,
     filename: nombreArchivo,
-    image: { type: 'jpeg', quality: 0.95 },
+    image: { type: 'jpeg', quality: 0.97 },
     html2canvas: {
-      scale: window.innerWidth < 768 ? 2 : 3, // móviles usan menos escala
+      scale: isMobile ? 2 : 3, // mejora en móviles sin reducir calidad
       useCORS: true,
       allowTaint: false,
+      removeContainer: true,   // corrige bug de opacidad móvil
       scrollY: 0,
-      backgroundColor: '#121212'
+      backgroundColor: '#121212',
+      logging: false
     },
     jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
