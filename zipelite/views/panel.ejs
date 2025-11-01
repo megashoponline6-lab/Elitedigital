@@ -306,7 +306,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // 🧠 Esperar imágenes antes de mostrar vista previa
+    // Esperar que las imágenes se carguen
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -314,21 +314,20 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 🧩 Inyectar CSS global dentro del modal para forzar tamaño de logos
-    const estiloForzado = document.createElement('style');
-    estiloForzado.innerHTML = `
-      #modalTicket img {
-        max-height: 100px !important;
-        width: auto !important;
-        height: auto !important;
-        display: block !important;
-        margin: 0 auto 10px !important;
-        object-fit: contain !important;
-      }
-    `;
-    modalContent.appendChild(estiloForzado);
+    // 💪 Forzar tamaño físico de todas las imágenes (aunque tengan inline style)
+    imgs.forEach(img => {
+      img.removeAttribute('width');
+      img.removeAttribute('height');
+      img.style.maxHeight = '110px';
+      img.style.maxWidth = '100%';
+      img.style.height = 'auto';
+      img.style.width = 'auto';
+      img.style.objectFit = 'contain';
+      img.style.display = 'block';
+      img.style.margin = '0 auto 10px';
+    });
 
-    // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
+    // Re-ejecutar scripts internos del ticket (html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
@@ -346,7 +345,7 @@ async function verTicket(id) {
   }
 }
 
-// 🧠 Esperar render completo y aplicar sistema de PDF estable
+// ✅ El resto: PDF estable, igual que antes
 async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   const imgs = elemento.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
@@ -357,7 +356,6 @@ async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   await new Promise(r => setTimeout(r, tiempoExtra));
 }
 
-// 🎟️ Detectar ticket cargado y aplicar script avanzado para PDF
 const observer = new MutationObserver(async (mutations) => {
   for (const mutation of mutations) {
     if (mutation.addedNodes.length) {
@@ -367,7 +365,6 @@ const observer = new MutationObserver(async (mutations) => {
         btn.onclick = async () => {
           try {
             await esperarRenderCompleto(ticket, 500);
-
             const imagenes = ticket.querySelectorAll('img');
             for (const img of imagenes) {
               try {
@@ -400,7 +397,6 @@ const observer = new MutationObserver(async (mutations) => {
             }
 
             window.scrollTo({ top: 0, behavior: 'instant' });
-
             const isMobile = window.innerWidth < 768;
             const opt = {
               margin: 0.3,
@@ -417,7 +413,6 @@ const observer = new MutationObserver(async (mutations) => {
               },
               jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
-
             await html2pdf().set(opt).from(ticket).save();
           } catch (err) {
             console.error('Error al generar PDF:', err);
