@@ -80,6 +80,7 @@
 <!-- 📦 Librería para convertir HTML a PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
+
 <script>
 function copiar(id) {
   const texto = document.getElementById(id).innerText.trim();
@@ -88,77 +89,94 @@ function copiar(id) {
   });
 }
 
-// ✅ Generar PDF con imágenes grandes convertidas y redimensionadas (funciona con Netflix, YouTube, etc.)
+// 🧠 Espera segura: garantiza que el ticket esté 100 % listo antes del PDF
+async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
+  // esperar que las imágenes estén cargadas
+  const imgs = elemento.querySelectorAll('img');
+  await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
+    if (img.complete) return resolve();
+    img.onload = resolve;
+    img.onerror = resolve;
+  })));
+
+  // esperar unos ms adicionales para que el navegador termine de pintar
+  await new Promise(r => setTimeout(r, tiempoExtra));
+}
+
+// ✅ Generar PDF estable (sin pantalla negra al primer intento)
 document.getElementById('btnPDF').addEventListener('click', async () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
   const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
 
-  // 🧩 Convierte las imágenes externas a base64 seguras (y reduce si son muy grandes)
-  const imagenes = ticket.querySelectorAll('img');
-  for (const img of imagenes) {
-    try {
-      const response = await fetch(img.src, { mode: 'cors' });
-      const blob = await response.blob();
-
-      // Redimensionar si el logo es muy grande
-      const objectURL = URL.createObjectURL(blob);
-      const tempImg = await new Promise((resolve) => {
-        const i = new Image();
-        i.onload = () => resolve(i);
-        i.src = objectURL;
-      });
-
-      const maxW = 400;
-      let newW = tempImg.width;
-      let newH = tempImg.height;
-
-      if (newW > maxW) {
-        const ratio = maxW / newW;
-        newW *= ratio;
-        newH *= ratio;
-      }
-
-      const canvas = document.createElement('canvas');
-      canvas.width = newW;
-      canvas.height = newH;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(tempImg, 0, 0, newW, newH);
-      img.src = canvas.toDataURL('image/png'); // reemplaza por imagen segura y redimensionada
-
-      URL.revokeObjectURL(objectURL);
-    } catch (e) {
-      console.warn('No se pudo convertir la imagen:', img.src, e);
-    }
-  }
-
-  // Forzar scroll arriba (evita recortes)
-  window.scrollTo({ top: 0, behavior: 'instant' });
-
-  // Configuración de PDF
-  const isMobile = window.innerWidth < 768;
-  const opt = {
-    margin: 0.3,
-    filename: nombreArchivo,
-    image: { type: 'jpeg', quality: 0.97 },
-    html2canvas: {
-      scale: isMobile ? 2 : 3,
-      useCORS: true,
-      allowTaint: false,
-      removeContainer: true,
-      scrollY: 0,
-      backgroundColor: '#121212',
-      logging: false
-    },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-  };
-
   try {
+    // Esperar que el renderizado esté completo
+    await esperarRenderCompleto(ticket, 500);
+
+    // Convertir imágenes externas grandes a base64 seguras
+    const imagenes = ticket.querySelectorAll('img');
+    for (const img of imagenes) {
+      try {
+        const response = await fetch(img.src, { mode: 'cors' });
+        const blob = await response.blob();
+
+        const objectURL = URL.createObjectURL(blob);
+        const tempImg = await new Promise((resolve) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.src = objectURL;
+        });
+
+        const maxW = 400;
+        let newW = tempImg.width;
+        let newH = tempImg.height;
+
+        if (newW > maxW) {
+          const ratio = maxW / newW;
+          newW *= ratio;
+          newH *= ratio;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = newW;
+        canvas.height = newH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(tempImg, 0, 0, newW, newH);
+        img.src = canvas.toDataURL('image/png');
+        URL.revokeObjectURL(objectURL);
+      } catch (e) {
+        console.warn('No se pudo convertir la imagen:', img.src, e);
+      }
+    }
+
+    // Forzar scroll arriba (evita recortes)
+    window.scrollTo({ top: 0, behavior: 'instant' });
+
+    const isMobile = window.innerWidth < 768;
+    const opt = {
+      margin: 0.3,
+      filename: nombreArchivo,
+      image: { type: 'jpeg', quality: 0.97 },
+      html2canvas: {
+        scale: isMobile ? 2 : 3,
+        useCORS: true,
+        allowTaint: false,
+        removeContainer: true,
+        scrollY: 0,
+        backgroundColor: '#121212',
+        logging: false
+      },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
     await html2pdf().set(opt).from(ticket).save();
+
   } catch (err) {
     console.error('Error al generar PDF:', err);
     alert('Hubo un error al generar el PDF. Intenta de nuevo.');
   }
 });
+</script>
+
 </script>
 
