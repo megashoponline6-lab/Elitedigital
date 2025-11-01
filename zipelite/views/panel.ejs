@@ -306,7 +306,7 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
-    // Esperar que las imágenes se carguen
+    // Esperar que las imágenes carguen completamente
     const imgs = modalContent.querySelectorAll('img');
     await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
       if (img.complete) return resolve();
@@ -314,20 +314,22 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 💪 Forzar tamaño físico de todas las imágenes (aunque tengan inline style)
+    // 🧠 Ajustar visualmente logos grandes solo en la vista previa (sin romper el PDF)
     imgs.forEach(img => {
       img.removeAttribute('width');
       img.removeAttribute('height');
-      img.style.maxHeight = '110px';
-      img.style.maxWidth = '100%';
-      img.style.height = 'auto';
-      img.style.width = 'auto';
-      img.style.objectFit = 'contain';
-      img.style.display = 'block';
-      img.style.margin = '0 auto 10px';
+      img.dataset.original = img.src; // guardamos su fuente original para restaurar en PDF
+      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+        img.style.maxHeight = '110px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        img.style.display = 'block';
+        img.style.margin = '0 auto 10px';
+      }
     });
 
-    // Re-ejecutar scripts internos del ticket (html2pdf)
+    // Re-ejecutar scripts embebidos del ticket
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
@@ -345,7 +347,7 @@ async function verTicket(id) {
   }
 }
 
-// ✅ El resto: PDF estable, igual que antes
+// ✅ Sistema PDF mejorado (restaura fondo y logos antes de html2pdf)
 async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   const imgs = elemento.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
@@ -365,38 +367,21 @@ const observer = new MutationObserver(async (mutations) => {
         btn.onclick = async () => {
           try {
             await esperarRenderCompleto(ticket, 500);
+
+            // ✅ Restaurar fondo y contexto antes del PDF
+            ticket.style.backgroundColor = '#121212';
+            ticket.style.color = '#fff';
+            ticket.style.transform = 'none';
+            ticket.style.opacity = '1';
+            document.body.style.backgroundColor = '#121212';
+
+            // ✅ Restaurar los logos a su src original antes del canvas
             const imagenes = ticket.querySelectorAll('img');
             for (const img of imagenes) {
-              try {
-                const response = await fetch(img.src, { mode: 'cors' });
-                const blob = await response.blob();
-                const objectURL = URL.createObjectURL(blob);
-                const tempImg = await new Promise((resolve) => {
-                  const i = new Image();
-                  i.onload = () => resolve(i);
-                  i.src = objectURL;
-                });
-                const maxW = 400;
-                let newW = tempImg.width;
-                let newH = tempImg.height;
-                if (newW > maxW) {
-                  const ratio = maxW / newW;
-                  newW *= ratio;
-                  newH *= ratio;
-                }
-                const canvas = document.createElement('canvas');
-                canvas.width = newW;
-                canvas.height = newH;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(tempImg, 0, 0, newW, newH);
-                img.src = canvas.toDataURL('image/png');
-                URL.revokeObjectURL(objectURL);
-              } catch (e) {
-                console.warn('No se pudo convertir la imagen:', img.src, e);
-              }
+              if (img.dataset.original) img.src = img.dataset.original;
             }
 
-            window.scrollTo({ top: 0, behavior: 'instant' });
+            // ✅ Conversión segura para PDF
             const isMobile = window.innerWidth < 768;
             const opt = {
               margin: 0.3,
@@ -413,6 +398,7 @@ const observer = new MutationObserver(async (mutations) => {
               },
               jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
+
             await html2pdf().set(opt).from(ticket).save();
           } catch (err) {
             console.error('Error al generar PDF:', err);
