@@ -33,23 +33,24 @@
     transform: scale(1.05);
     box-shadow: 0 0 20px #ff003c, 0 0 30px #ff6a00;
   }
- <style>
   .platform-logo {
-    display: block;
-    width: 100%;
-    max-width: 320px; /* 🔹 límite razonable en pantallas grandes */
-    height: auto;
-    max-height: 180px;
-    margin: 0 auto 1.5rem auto;
-    padding: 10px;
-    background-color: #000; /* 🔹 fondo oscuro detrás de logos con transparencia */
     border-radius: 1rem;
-    object-fit: contain; /* 🔹 muestra todo el logo completo sin recorte */
-    object-position: center;
-    box-shadow: 0 0 20px rgba(255, 0, 60, 0.3);
+    height: 180px;
+    object-fit: contain;
+    background: rgba(0,0,0,.5);
+    margin-bottom: 1.5rem;
+  }
+  .modal-content {
+    background: rgba(15,15,25,.95);
+    color: #fff;
+    border: 1px solid rgba(255,0,60,.4);
+    box-shadow: 0 0 25px rgba(255,0,60,.3);
+  }
+  .text-info {
+    color: #00eaff!important;
+    text-shadow: 0 0 10px #00eaff;
   }
 </style>
-
 
 <div class="container text-center mt-5">
   <% 
