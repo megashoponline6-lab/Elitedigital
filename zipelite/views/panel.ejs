@@ -314,21 +314,19 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
-    // 🎨 Ajustar logos grandes automáticamente solo en vista previa del modal
-    imgs.forEach(img => {
-      const naturalW = img.naturalWidth || 0;
-      const naturalH = img.naturalHeight || 0;
-
-      // Si la imagen es muy grande o desproporcionada, la redimensionamos visualmente
-      if (naturalW > 600 || naturalH > 200) {
-        img.style.maxHeight = '100px';
-        img.style.width = 'auto';
-        img.style.height = 'auto';
-        img.style.objectFit = 'contain';
-        img.style.display = 'block';
-        img.style.margin = '0 auto 10px';
+    // 🧩 Inyectar CSS global dentro del modal para forzar tamaño de logos
+    const estiloForzado = document.createElement('style');
+    estiloForzado.innerHTML = `
+      #modalTicket img {
+        max-height: 100px !important;
+        width: auto !important;
+        height: auto !important;
+        display: block !important;
+        margin: 0 auto 10px !important;
+        object-fit: contain !important;
       }
-    });
+    `;
+    modalContent.appendChild(estiloForzado);
 
     // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
@@ -348,7 +346,7 @@ async function verTicket(id) {
   }
 }
 
-// 🧠 Esperar render completo y aplicar sistema de PDF estable (sin tocar la vista previa)
+// 🧠 Esperar render completo y aplicar sistema de PDF estable
 async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   const imgs = elemento.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
@@ -366,25 +364,21 @@ const observer = new MutationObserver(async (mutations) => {
       const btn = modalContent.querySelector('#btnPDF');
       const ticket = modalContent.querySelector('#ticket');
       if (btn && ticket) {
-        // Evitar múltiples listeners
         btn.onclick = async () => {
           try {
             await esperarRenderCompleto(ticket, 500);
 
-            // Convertir imágenes externas grandes a base64 seguras
             const imagenes = ticket.querySelectorAll('img');
             for (const img of imagenes) {
               try {
                 const response = await fetch(img.src, { mode: 'cors' });
                 const blob = await response.blob();
-
                 const objectURL = URL.createObjectURL(blob);
                 const tempImg = await new Promise((resolve) => {
                   const i = new Image();
                   i.onload = () => resolve(i);
                   i.src = objectURL;
                 });
-
                 const maxW = 400;
                 let newW = tempImg.width;
                 let newH = tempImg.height;
@@ -393,7 +387,6 @@ const observer = new MutationObserver(async (mutations) => {
                   newW *= ratio;
                   newH *= ratio;
                 }
-
                 const canvas = document.createElement('canvas');
                 canvas.width = newW;
                 canvas.height = newH;
@@ -435,8 +428,5 @@ const observer = new MutationObserver(async (mutations) => {
     }
   }
 });
-
-// 🔎 Observar el contenido del modal (detecta cuando carga el ticket)
 observer.observe(modalContent, { childList: true, subtree: true });
 </script>
-
