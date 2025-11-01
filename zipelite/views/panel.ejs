@@ -306,6 +306,30 @@ async function verTicket(id) {
     const html = await res.text();
     modalContent.innerHTML = html;
 
+    // 🧠 Esperar imágenes antes de mostrar vista previa
+    const imgs = modalContent.querySelectorAll('img');
+    await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
+      if (img.complete) return resolve();
+      img.onload = resolve;
+      img.onerror = resolve;
+    })));
+
+    // 🎨 Ajustar logos grandes automáticamente solo en vista previa del modal
+    imgs.forEach(img => {
+      const naturalW = img.naturalWidth || 0;
+      const naturalH = img.naturalHeight || 0;
+
+      // Si la imagen es muy grande o desproporcionada, la redimensionamos visualmente
+      if (naturalW > 600 || naturalH > 200) {
+        img.style.maxHeight = '100px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.objectFit = 'contain';
+        img.style.display = 'block';
+        img.style.margin = '0 auto 10px';
+      }
+    });
+
     // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
@@ -323,7 +347,8 @@ async function verTicket(id) {
     modalContent.innerHTML = '<p style="color:red;text-align:center;">Error al cargar el ticket.</p>';
   }
 }
-// 🧠 Mejora: Esperar render completo y aplicar el mismo sistema de PDF estable
+
+// 🧠 Esperar render completo y aplicar sistema de PDF estable (sin tocar la vista previa)
 async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   const imgs = elemento.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
@@ -334,7 +359,7 @@ async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
   await new Promise(r => setTimeout(r, tiempoExtra));
 }
 
-// 🎟️ Detectar ticket cargado y aplicar script avanzado
+// 🎟️ Detectar ticket cargado y aplicar script avanzado para PDF
 const observer = new MutationObserver(async (mutations) => {
   for (const mutation of mutations) {
     if (mutation.addedNodes.length) {
@@ -413,5 +438,5 @@ const observer = new MutationObserver(async (mutations) => {
 
 // 🔎 Observar el contenido del modal (detecta cuando carga el ticket)
 observer.observe(modalContent, { childList: true, subtree: true });
-
 </script>
+
