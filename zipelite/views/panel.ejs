@@ -290,18 +290,6 @@
   </div>
 </div>
 
-<!-- 🎨 Ajuste visual para logos grandes dentro del modal -->
-<style>
-  #modalTicket img {
-    max-height: 110px !important;
-    width: auto !important;
-    height: auto !important;
-    display: block !important;
-    margin: 0 auto 10px !important;
-    object-fit: contain !important;
-  }
-</style>
-
 <script>
 const modal = document.getElementById('modalTicket');
 const modalContent = document.getElementById('contenidoTicket');
@@ -326,15 +314,24 @@ async function verTicket(id) {
       img.onerror = resolve;
     })));
 
+    // 🧩 Ajustar tamaño de logos grandes dentro del modal
+    imgs.forEach(img => {
+      if (img.naturalWidth > 600 || img.naturalHeight > 200) {
+        img.style.maxHeight = '120px';
+        img.style.width = 'auto';
+        img.style.height = 'auto';
+        img.style.display = 'block';
+        img.style.margin = '0 auto 10px';
+        img.style.objectFit = 'contain';
+      }
+    });
+
     // 🔧 Ejecutar cualquier script embebido en el ticket (como html2pdf)
     const scripts = modalContent.querySelectorAll("script");
     scripts.forEach(oldScript => {
       const newScript = document.createElement("script");
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
-      }
+      if (oldScript.src) newScript.src = oldScript.src;
+      else newScript.textContent = oldScript.textContent;
       document.body.appendChild(newScript);
     });
 
@@ -344,23 +341,3 @@ async function verTicket(id) {
   }
 }
 </script>
-<script>
-// ✅ Reajustar logos grandes visualmente después de cargar el ticket
-const observerLogos = new MutationObserver(() => {
-  const imgs = modalContent.querySelectorAll('img');
-  imgs.forEach(img => {
-    if (img.naturalWidth > 600 || img.naturalHeight > 200) {
-      img.style.setProperty('max-height', '110px', 'important');
-      img.style.setProperty('width', 'auto', 'important');
-      img.style.setProperty('height', 'auto', 'important');
-      img.style.setProperty('display', 'block', 'important');
-      img.style.setProperty('margin', '0 auto 10px', 'important');
-      img.style.setProperty('object-fit', 'contain', 'important');
-    }
-  });
-});
-
-// 👁️ Observa los cambios en el contenido del modal
-observerLogos.observe(modalContent, { childList: true, subtree: true });
-</script>
-
