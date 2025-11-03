@@ -558,6 +558,23 @@ app.post('/admin/recargar', requireAdmin, csrfProtection, async (req, res) => {
     res.redirect('/admin/panel?error=Error al recargar saldo');
   }
 });
+// 🗑️ Eliminar usuario desde panel admin
+app.post('/admin/usuarios/:id/delete', requireAdmin, csrfProtection, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+    if (!user) {
+      return res.redirect('/admin/panel?error=Usuario no encontrado');
+    }
+
+    await User.deleteOne({ _id: id });
+    console.log(`🗑️ Usuario eliminado: ${user.correo}`);
+    res.redirect('/admin/panel?ok=Usuario eliminado correctamente');
+  } catch (err) {
+    console.error('❌ Error al eliminar usuario:', err);
+    res.redirect('/admin/panel?error=Error al eliminar usuario');
+  }
+});
 
 // ───────────────────────────────────────────────────────────────────────────────
 // 🚪 Logout y errores
