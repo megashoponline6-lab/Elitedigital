@@ -1,4 +1,7 @@
-// ✅ models/User.js — versión corregida (sin índice unique conflictivo)
+// ✅ models/User.js
+// Modelo oficial de usuarios para Eliteflix con MongoDB Atlas
+// Guarda usuarios de forma permanente y es totalmente compatible con Render
+
 import mongoose from "mongoose";
 
 // 🧩 Esquema del usuario (estructura de datos en MongoDB)
@@ -27,7 +30,7 @@ const userSchema = new mongoose.Schema(
     correo: {
       type: String,
       required: [true, "El correo es obligatorio"],
-      // unique: true,  ❌ Eliminado para evitar conflictos en MongoDB
+      unique: true,
       lowercase: true,
       trim: true,
       match: [/.+\@.+\..+/, "Correo inválido"],
@@ -55,14 +58,14 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true,
-    collection: "users",
+    timestamps: true, // crea automáticamente createdAt y updatedAt
+    collection: "users", // asegura el nombre fijo de la colección
   }
 );
 
-// 🔍 Índice normal (no unique) para búsquedas rápidas por correo
+// 🔍 Índice optimizado para búsquedas por correo
 userSchema.index({ correo: 1 });
 
-// ✅ Exporta el modelo de forma segura
+// ✅ Exporta el modelo de forma segura (evita errores en reimportación)
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 export default User;
