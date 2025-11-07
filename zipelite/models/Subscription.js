@@ -1,6 +1,12 @@
-// ✅ models/Subscription.js — versión completa y funcional con datos de cuenta asignada
-
+// ✅ models/Subscription.js — versión corregida (incluye mensaje de pantalla)
 import mongoose from 'mongoose';
+
+// 🧾 Subdocumento con los datos de acceso
+const datosCuentaSchema = new mongoose.Schema({
+  correo: { type: String },
+  password: { type: String },
+  mensaje: { type: String, default: '' }, // ✅ ← CLAVE: ahora sí se guarda el texto "Pantalla 1"
+});
 
 // 📦 Esquema de suscripciones (cuando un usuario compra una plataforma)
 const subscriptionSchema = new mongoose.Schema(
@@ -12,7 +18,7 @@ const subscriptionSchema = new mongoose.Schema(
       required: true,
     },
 
-    // 🎬 Plataforma adquirida (Netflix, Disney+, etc.)
+    // 🎬 Plataforma adquirida
     platformId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Platform',
@@ -33,31 +39,20 @@ const subscriptionSchema = new mongoose.Schema(
       min: 0,
     },
 
-    // 📅 Fechas de inicio y fin
-    fechaInicio: {
-      type: Date,
-      default: Date.now,
-    },
-    fechaFin: {
-      type: Date,
-    },
+    // 📅 Fechas
+    fechaInicio: { type: Date, default: Date.now },
+    fechaFin: { type: Date },
 
-    // 🟢 Estado actual de la suscripción
-    activa: {
-      type: Boolean,
-      default: true,
-    },
+    // 🟢 Estado
+    activa: { type: Boolean, default: true },
 
-    // 🧾 Datos de la cuenta asignada (Netflix, Disney+, etc.)
-    datosCuenta: {
-      correo: { type: String },
-      password: { type: String },
-    },
+    // 🧾 Datos de cuenta con correo, password y mensaje (pantalla asignada)
+    datosCuenta: { type: datosCuentaSchema, required: true },
   },
   { timestamps: true }
 );
 
-// ✅ Evita error de modelo duplicado en entornos como Render
+// ✅ Evita error de modelo duplicado en Render
 const Subscription =
   mongoose.models.Subscription ||
   mongoose.model('Subscription', subscriptionSchema);
