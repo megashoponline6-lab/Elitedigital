@@ -1,4 +1,4 @@
-// ✅ controllers/adminAccountsController.js — versión final (Mongo puro, sin liberar cupos automáticamente)
+// ✅ controllers/adminAccountsController.js — versión final (compatible con cupos individuales tipo “Pantalla 1, Pantalla 2…”)
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 
@@ -45,6 +45,7 @@ export const view = async (req, res) => {
 
 /**
  * ➕ Crear una nueva cuenta compartida
+ * Genera automáticamente pantallas numeradas (Pantalla 1, Pantalla 2, etc.)
  */
 export const create = async (req, res) => {
   try {
@@ -53,15 +54,30 @@ export const create = async (req, res) => {
       return res.redirect('/admin/cuentas?error=Faltan campos obligatorios');
     }
 
+    const total = Number(cupos);
+    if (Number.isNaN(total) || total <= 0) {
+      return res.redirect('/admin/cuentas?error=El número de pantallas no es válido');
+    }
+
+    // 🔁 Crear array de pantallas (cupos)
+    const listaCupos = [];
+    for (let i = 1; i <= total; i++) {
+      listaCupos.push({
+        numero: i,
+        disponible: true,
+        mensaje: `Pantalla ${i}`,
+      });
+    }
+
     await Account.create({
       plataformaId,
       correo: correo.trim().toLowerCase(),
       password: password.trim(),
-      cupos: Number(cupos),
+      cupos: listaCupos,
       activa: true,
     });
 
-    console.log(`✅ Cuenta creada: ${correo}`);
+    console.log(`✅ Cuenta creada con ${total} pantallas: ${correo}`);
     res.redirect('/admin/cuentas?ok=Cuenta creada correctamente');
   } catch (err) {
     console.error('❌ Error al crear cuenta:', err);
@@ -77,16 +93,31 @@ export const update = async (req, res) => {
     const { id } = req.params;
     const { correo, password, cupos, activa } = req.body;
 
-    const updated = await Account.findByIdAndUpdate(id, {
-      ...(correo ? { correo: correo.trim().toLowerCase() } : {}),
-      ...(password ? { password: password.trim() } : {}),
-      ...(cupos ? { cupos: Number(cupos) } : {}),
-      activa: activa === 'true' || activa === true,
-    });
+    const cuenta = await Account.findById(id);
+    if (!cuenta) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
 
-    if (!updated) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
+    if (correo) cuenta.correo = correo.trim().toLowerCase();
+    if (password) cuenta.password = password.trim();
+    cuenta.activa = activa === 'true' || activa === true;
 
-    console.log(`🟡 Cuenta actualizada: ${correo || id}`);
+    // Si el admin cambia el número total de pantallas:
+    if (cupos) {
+      const total = Number(cupos);
+      if (!Number.isNaN(total) && total > 0) {
+        const nuevosCupos = [];
+        for (let i = 1; i <= total; i++) {
+          // Mantener los existentes si ya había cupos definidos
+          const existente = cuenta.cupos.find(c => c.numero === i);
+          nuevosCupos.push(
+            existente || { numero: i, disponible: true, mensaje: `Pantalla ${i}` }
+          );
+        }
+        cuenta.cupos = nuevosCupos;
+      }
+    }
+
+    await cuenta.save();
+    console.log(`🟡 Cuenta actualizada: ${cuenta.correo}`);
     res.redirect('/admin/cuentas?ok=Cuenta actualizada correctamente');
   } catch (err) {
     console.error('❌ Error al actualizar cuenta:', err);
@@ -113,15 +144,15 @@ export const remove = async (req, res) => {
 
 /**
  * 🎲 Seleccionar cuenta(s) aleatoria(s) al comprar — y descontar cupos
- * ⚠️ No libera cupos automáticamente cuando vence la suscripción.
+ * ⚙️ Adaptado al nuevo modelo: busca cupos individuales disponibles
  */
 export const pickRandomAccounts = async (plataformaId, count = 1) => {
   try {
-    // Buscar cuentas activas con cupos disponibles
+    // Buscar cuentas activas que tengan al menos un cupo disponible
     const pool = await Account.find({
       plataformaId,
       activa: true,
-      cupos: { $gt: 0 },
+      'cupos.disponible': true,
     }).lean();
 
     if (!pool.length) return [];
@@ -132,17 +163,27 @@ export const pickRandomAccounts = async (plataformaId, count = 1) => {
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
 
-    // Seleccionar las cuentas necesarias (según el número solicitado)
-    const selected = pool.slice(0, Math.min(count, pool.length));
+    const selected = [];
+    for (const acc of pool) {
+      if (selected.length >= count) break;
 
-    // Descontar cupos inmediatamente
-    await Promise.all(
-      selected.map(acc =>
-        Account.updateOne({ _id: acc._id, cupos: { $gt: 0 } }, { $inc: { cupos: -1 } })
-      )
-    );
+      // Buscar el primer cupo disponible
+      const cupoLibre = acc.cupos.find(c => c.disponible);
+      if (cupoLibre) {
+        // Marcarlo como ocupado
+        await Account.updateOne(
+          { _id: acc._id, 'cupos.numero': cupoLibre.numero },
+          { $set: { 'cupos.$.disponible': false } }
+        );
 
-    console.log(`🎟️ ${selected.length} cuenta(s) asignada(s) aleatoriamente`);
+        selected.push({
+          ...acc,
+          cupoAsignado: cupoLibre,
+        });
+      }
+    }
+
+    console.log(`🎟️ ${selected.length} cupo(s) asignado(s) correctamente`);
     return selected;
   } catch (err) {
     console.error('❌ Error al asignar cuenta aleatoria:', err);
