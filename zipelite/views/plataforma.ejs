@@ -55,11 +55,9 @@
 <div class="container text-center mt-5">
   <% 
     // ✅ Detección robusta del logo (corrige rutas duplicadas y antiguas)
-    let logoPath = '/img/default.png'; // fallback
-
+    let logoPath = '/img/default.png';
     if (plataforma.logoUrl) {
       let url = plataforma.logoUrl.trim();
-
       if (url.includes('img/plataformas/')) {
         logoPath = url.startsWith('/') ? url : '/' + url;
       } else if (url.includes('/plataforma/img/')) {
@@ -84,16 +82,24 @@
       <div class="col-6 col-md-4 col-lg-3">
         <div class="plan-card">
           <h5><%= p.meses %> mes<%= p.meses > 1 ? 'es' : '' %></h5>
-          <p class="fs-5 text-info mb-3">$<%= p.precio %> MXN</p>
-          <button class="btn btn-adquirir w-100"
-            data-bs-toggle="modal"
-            data-bs-target="#confirmModal"
-            data-id="<%= plataforma._id %>"
-            data-meses="<%= p.meses %>"
-            data-precio="<%= p.precio %>"
-            data-nombre="<%= plataforma.name %>">
-            Adquirir
-          </button>
+
+          <% if (p.agotado) { %>
+            <p class="fs-5 text-danger fw-bold">❌ Agotado</p>
+            <button class="btn btn-secondary w-100" disabled style="opacity:0.6;cursor:not-allowed;">
+              No disponible
+            </button>
+          <% } else { %>
+            <p class="fs-5 text-info mb-3">$<%= p.precio.toFixed(2) %> MXN</p>
+            <button class="btn btn-adquirir w-100"
+              data-bs-toggle="modal"
+              data-bs-target="#confirmModal"
+              data-id="<%= plataforma._id %>"
+              data-meses="<%= p.meses %>"
+              data-precio="<%= p.precio %>"
+              data-nombre="<%= plataforma.name %>">
+              Adquirir
+            </button>
+          <% } %>
         </div>
       </div>
     <% }) %>
@@ -145,6 +151,6 @@
     
     document.getElementById('inputMeses').value = meses;
     document.getElementById('inputPrecio').value = precio;
-    form.action = `/plataforma/${id}/adquirir`; // ✅ ruta exacta
+    form.action = `/plataforma/${id}/adquirir`;
   });
 </script>
