@@ -476,7 +476,6 @@ app.get('/ticket/:id', async (req, res) => {
     const plataforma =
       suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
     const dur = String(suscripcion.meses);
-        const dur = String(suscripcion.meses);
 
     // 🧠 Prioridad: mensaje del cupo → mensaje del plan → mensaje genérico
     const mensaje =
