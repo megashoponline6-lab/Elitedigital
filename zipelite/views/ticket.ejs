@@ -44,6 +44,10 @@
       </span>
       <button onclick="copiar('password')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
+
+    <% if (suscripcion.datosCuenta?.mensaje) { %>
+      <p><strong>🖥️ Pantalla asignada:</strong> <%= suscripcion.datosCuenta.mensaje %></p>
+    <% } %>
   </div>
 
   <div style="margin-top:25px;background:#1e1e1e;padding:15px 20px;border-left:5px solid #e50914;border-radius:10px;">
@@ -80,7 +84,6 @@
 <!-- 📦 Librería para convertir HTML a PDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
-
 <script>
 function copiar(id) {
   const texto = document.getElementById(id).innerText.trim();
@@ -91,37 +94,31 @@ function copiar(id) {
 
 // 🧠 Espera segura: garantiza que el ticket esté 100 % listo antes del PDF
 async function esperarRenderCompleto(elemento, tiempoExtra = 400) {
-  // esperar que las imágenes estén cargadas
   const imgs = elemento.querySelectorAll('img');
   await Promise.all(Array.from(imgs).map(img => new Promise(resolve => {
     if (img.complete) return resolve();
     img.onload = resolve;
     img.onerror = resolve;
   })));
-
-  // esperar unos ms adicionales para que el navegador termine de pintar
   await new Promise(r => setTimeout(r, tiempoExtra));
 }
 
-// ✅ Generar PDF estable (sin pantalla negra al primer intento)
+// ✅ Generar PDF estable
 document.getElementById('btnPDF').addEventListener('click', async () => {
   const ticket = document.getElementById('ticket');
   const fecha = new Date().toISOString().slice(0, 10);
   const nombreArchivo = `${'<%= plataforma.name.replace(/\\s+/g, "_") %>'}_${fecha}.pdf`;
 
   try {
-    // Esperar que el renderizado esté completo
     await esperarRenderCompleto(ticket, 500);
 
-    // Convertir imágenes externas grandes a base64 seguras
     const imagenes = ticket.querySelectorAll('img');
     for (const img of imagenes) {
       try {
         const response = await fetch(img.src, { mode: 'cors' });
         const blob = await response.blob();
-
         const objectURL = URL.createObjectURL(blob);
-        const tempImg = await new Promise((resolve) => {
+        const tempImg = await new Promise(resolve => {
           const i = new Image();
           i.onload = () => resolve(i);
           i.src = objectURL;
@@ -149,7 +146,6 @@ document.getElementById('btnPDF').addEventListener('click', async () => {
       }
     }
 
-    // Forzar scroll arriba (evita recortes)
     window.scrollTo({ top: 0, behavior: 'instant' });
 
     const isMobile = window.innerWidth < 768;
@@ -177,6 +173,3 @@ document.getElementById('btnPDF').addEventListener('click', async () => {
   }
 });
 </script>
-
-</script>
-
