@@ -1,4 +1,4 @@
-// ✅ controllers/salesController.js — Versión final lista para Render (ESM)
+// ✅ controllers/salesController.js — Versión final con asignación de cupo y mensaje personalizado
 import Account from '../models/Account.js';
 import Platform from '../models/Platform.js';
 import { pickRandomAccounts } from './adminAccountsController.js';
@@ -30,16 +30,43 @@ export const buyPlatform = async (req, res) => {
       return res.status(400).send('No hay cuentas disponibles para esta plataforma');
     }
 
+    // 🧠 Para cada cuenta seleccionada, buscar un cupo libre y asignarlo
+    const accountsWithSlots = [];
+    for (const acc of selectedAccounts) {
+      const account = await Account.findById(acc._id);
+
+      // Buscar un cupo disponible dentro de la cuenta
+      const cupoLibre = account.cupos.find(c => c.disponible);
+      if (!cupoLibre) continue;
+
+      // Marcar el cupo como ocupado
+      cupoLibre.disponible = false;
+      account.lastUsed = new Date();
+      await account.save();
+
+      // Agregar datos finales que se mostrarán al cliente
+      accountsWithSlots.push({
+        correo: account.correo,
+        password: account.password,
+        mensaje: cupoLibre.mensaje || `Pantalla ${cupoLibre.numero}`
+      });
+    }
+
+    // Si no se encontraron cupos disponibles
+    if (!accountsWithSlots.length) {
+      return res.status(400).send('No hay cupos disponibles actualmente.');
+    }
+
     // 🔹 Mostrar resultado al cliente (vista o JSON)
     // Si tienes una vista EJS de confirmación, puedes renderizarla:
     return res.render('client/purchase-success', {
       title: 'Compra completada',
       platform,
-      accounts: selectedAccounts
+      accounts: accountsWithSlots
     });
 
     // 🔸 Alternativamente, si lo manejas desde AJAX / API:
-    // res.json({ success: true, platform, accounts: selectedAccounts });
+    // res.json({ success: true, platform, accounts: accountsWithSlots });
 
   } catch (err) {
     console.error('❌ Error al procesar la compra:', err);
