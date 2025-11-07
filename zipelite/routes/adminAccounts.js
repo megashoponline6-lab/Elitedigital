@@ -8,6 +8,7 @@ import {
   update,
   remove
 } from '../controllers/adminAccountsController.js';
+import Account from '../models/Account.js'; // ✅ Import necesario para toggle
 
 const router = express.Router();
 const csrfProtection = csrf({ cookie: true });
@@ -40,6 +41,24 @@ router.post('/admin/cuentas/:id/update', ensureAdmin, csrfProtection, update);
 
 // 🔹 Eliminar cuenta permanentemente
 router.post('/admin/cuentas/:id/delete', ensureAdmin, csrfProtection, remove);
+
+// 🔹 Activar / desactivar cuenta (toggle)
+router.post('/admin/cuentas/:id/toggle', ensureAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cuenta = await Account.findById(id);
+    if (!cuenta) return res.redirect('/admin/cuentas?error=Cuenta no encontrada');
+
+    cuenta.activa = !cuenta.activa;
+    await cuenta.save();
+
+    console.log(`🔁 Cuenta ${cuenta.correo} ahora ${cuenta.activa ? 'ACTIVA' : 'INACTIVA'}`);
+    res.redirect(`/admin/cuentas?ok=Cuenta ${cuenta.activa ? 'activada' : 'desactivada'} correctamente`);
+  } catch (err) {
+    console.error('❌ Error al alternar estado de cuenta:', err);
+    res.redirect('/admin/cuentas?error=Error al cambiar estado');
+  }
+});
 
 /**
  * 🚀 Exportación
