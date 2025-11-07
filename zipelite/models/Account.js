@@ -1,5 +1,12 @@
-// ✅ models/Account.js — versión final con rotación ordenada de cupos
+// ✅ models/Account.js — versión extendida con mensajes por cupo
 import mongoose from 'mongoose';
+
+// 🎟️ Subesquema de cupo individual
+const cupoSchema = new mongoose.Schema({
+  numero: { type: Number, required: true }, // Ej: 1, 2, 3, 4, 5
+  disponible: { type: Boolean, default: true },
+  mensaje: { type: String, default: '' } // Ej: "Pantalla 1"
+});
 
 const AccountSchema = new mongoose.Schema(
   {
@@ -24,11 +31,10 @@ const AccountSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // 👥 Cupos disponibles (por ejemplo, Netflix con 4 cupos)
+    // 👥 Cupos de la cuenta (con mensajes personalizados)
     cupos: {
-      type: Number,
-      required: true,
-      min: 0,
+      type: [cupoSchema],
+      default: [],
     },
 
     // ⚙️ Estado de la cuenta (activa o pausada)
