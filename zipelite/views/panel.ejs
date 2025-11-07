@@ -351,4 +351,25 @@ async function verTicket(id) {
   }
 }
 </script>
+<script>
+// 🔄 Actualiza el saldo del usuario automáticamente cada 10 segundos
+async function actualizarSaldo() {
+  try {
+    const res = await fetch('/api/saldo');
+    const data = await res.json();
+    if (data.saldo !== undefined) {
+      const saldoEl = document.querySelector('#saldo-usuario');
+      if (saldoEl) saldoEl.textContent = data.saldo.toFixed(2);
+    }
+  } catch (e) {
+    console.warn('⚠️ No se pudo actualizar el saldo:', e);
+  }
+}
+
+// Ejecutar al cargar la página
+actualizarSaldo();
+
+// Repetir cada 10 segundos
+setInterval(actualizarSaldo, 10000);
+</script>
 
