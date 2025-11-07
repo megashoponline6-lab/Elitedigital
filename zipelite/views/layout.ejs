@@ -95,3 +95,16 @@
 
 </body>
 </html>
+  <!-- 🔕 Auto-ocultar alertas (5 segundos) -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const alerts = document.querySelectorAll('.alert');
+      alerts.forEach(alert => {
+        setTimeout(() => {
+          alert.style.transition = 'opacity 0.8s ease';
+          alert.style.opacity = '0';
+          setTimeout(() => alert.remove(), 800);
+        }, 5000); // ⏱️ 5000 ms = 5 segundos
+      });
+    });
+  </script>
