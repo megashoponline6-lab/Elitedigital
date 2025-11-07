@@ -424,12 +424,28 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
       return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
     if ((user.saldo || 0) < costo)
       return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
+// 🔁 Buscar una cuenta activa con al menos un cupo disponible
+let cuenta = await Account.findOne({
+  plataformaId: plataforma._id,
+  activa: true,
+  'cupos.disponible': true
+}).sort({ lastUsed: 1 });
 
-    // 🔁 round-robin
-    const cuenta = await Account.findOneAndUpdate(
-      { plataformaId: plataforma._id, cupos: { $gt: 0 }, activa: true },
-      { $inc: { cupos: -1 }, $set: { lastUsed: new Date() } },
-      { sort: { lastUsed: 1 }, new: true }
+if (!cuenta) {
+  return res.redirect(`/plataforma/${plataforma._id}?error=Sin cuentas disponibles`);
+}
+
+// 🔁 Marcar el primer cupo disponible como ocupado
+const cupo = cuenta.cupos.find(c => c.disponible === true);
+if (cupo) {
+  cupo.disponible = false;
+  cuenta.lastUsed = new Date();
+  await cuenta.save();
+}
+
+// 🔐 Guardar datos de acceso del cupo (para mostrarlo luego en el ticket)
+const mensajeCupo = cupo?.mensaje || `Pantalla ${cupo?.numero || '?'}`;
+
     );
 
     if (!cuenta) {
