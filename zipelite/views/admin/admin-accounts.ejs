@@ -56,7 +56,7 @@
 
           <!-- Cupos -->
           <div class="col-md-2">
-            <label class="form-label">Cupos</label>
+            <label class="form-label">Pantallas</label>
             <input
               type="number"
               name="cupos"
@@ -120,7 +120,7 @@
               <th>Plataforma</th>
               <th>Correo</th>
               <th>Contraseña</th>
-              <th>Cupos</th>
+              <th>Pantallas</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -153,8 +153,23 @@
                     </button>
                   </td>
 
-                  <!-- Cupos -->
-                  <td><%= acc.cupos %></td>
+                  <!-- Cupos individuales -->
+                  <td>
+                    <% if (acc.cupos && acc.cupos.length > 0) { %>
+                      <div class="d-flex flex-wrap gap-1">
+                        <% acc.cupos.forEach(c => { %>
+                          <span
+                            class="badge <%= c.disponible ? 'bg-success' : 'bg-danger' %>"
+                            title="<%= c.mensaje || ('Pantalla ' + c.numero) %>"
+                          >
+                            <%= c.mensaje || ('Pantalla ' + c.numero) %>
+                          </span>
+                        <% }) %>
+                      </div>
+                    <% } else { %>
+                      <span class="text-secondary">Sin pantallas</span>
+                    <% } %>
+                  </td>
 
                   <!-- Estado -->
                   <td>
