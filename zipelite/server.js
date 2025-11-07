@@ -409,7 +409,7 @@ app.get('/plataforma/:id', requireAuth, async (req, res) => {
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
-// 💳 Adquirir plan (rotación ordenada + ticket modal)
+// 💳 Adquirir plan (rotación ordenada + ticket modal + cupos con pantallas)
 // ───────────────────────────────────────────────────────────────────────────────
 app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   try {
@@ -424,40 +424,38 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
       return res.redirect(`/plataforma/${req.params.id}?error=Datos inválidos`);
     if ((user.saldo || 0) < costo)
       return res.redirect(`/plataforma/${plataforma._id}?error=Saldo insuficiente`);
-// 🔁 Buscar una cuenta activa con al menos un cupo disponible
-let cuenta = await Account.findOne({
-  plataformaId: plataforma._id,
-  activa: true,
-  'cupos.disponible': true
-}).sort({ lastUsed: 1 });
 
-if (!cuenta) {
-  return res.redirect(`/plataforma/${plataforma._id}?error=Sin cuentas disponibles`);
-}
-
-// 🔁 Marcar el primer cupo disponible como ocupado
-const cupo = cuenta.cupos.find(c => c.disponible === true);
-if (cupo) {
-  cupo.disponible = false;
-  cuenta.lastUsed = new Date();
-  await cuenta.save();
-}
-
-// 🔐 Guardar datos de acceso del cupo (para mostrarlo luego en el ticket)
-const mensajeCupo = cupo?.mensaje || `Pantalla ${cupo?.numero || '?'}`;
-
-    );
+    // 🔁 Buscar una cuenta activa con al menos un cupo disponible
+    let cuenta = await Account.findOne({
+      plataformaId: plataforma._id,
+      activa: true,
+      'cupos.disponible': true
+    }).sort({ lastUsed: 1 });
 
     if (!cuenta) {
       return res.redirect(`/plataforma/${plataforma._id}?error=Sin cuentas disponibles`);
     }
 
+    // 🔁 Marcar el primer cupo disponible como ocupado
+    const cupo = cuenta.cupos.find(c => c.disponible === true);
+    if (cupo) {
+      cupo.disponible = false;
+      cuenta.lastUsed = new Date();
+      await cuenta.save();
+    }
+
+    // 🔐 Guardar datos de acceso del cupo (para mostrarlo luego en el ticket)
+    const mensajeCupo = cupo?.mensaje || `Pantalla ${cupo?.numero || '?'}`;
+
+    // 💰 Descontar saldo del usuario
     user.saldo = (user.saldo || 0) - costo;
     await user.save();
 
+    // 🗓️ Crear la suscripción con duración
     const fechaInicio = new Date();
     const fechaFin = dayjs(fechaInicio).add(mesesInt, 'month').toDate();
 
+    // 🧾 Crear nueva suscripción (con mensaje de pantalla incluido)
     const nuevaSuscripcion = await Subscription.create({
       userId: user._id,
       platformId: plataforma._id,
@@ -466,13 +464,23 @@ const mensajeCupo = cupo?.mensaje || `Pantalla ${cupo?.numero || '?'}`;
       fechaInicio,
       fechaFin,
       activa: true,
-      datosCuenta: { correo: cuenta.correo, password: cuenta.password },
+      datosCuenta: {
+        correo: cuenta.correo,
+        password: cuenta.password,
+        mensaje: mensajeCupo, // ✅ ← AQUÍ es donde va exactamente
+      },
     });
 
-    console.log(`✅ Cupo descontado y rotado en ${cuenta.correo}`);
+    console.log(`✅ Cupo asignado (${mensajeCupo}) en ${cuenta.correo}`);
 
-    // 🎟️ Redirigir directamente al ticket (abre dentro del panel o nueva pestaña según origen)
-return res.redirect(`/ticket/${nuevaSuscripcion._id}`);
+    // 🎟️ Redirigir directamente al ticket
+    return res.redirect(`/ticket/${nuevaSuscripcion._id}`);
+  } catch (err) {
+    console.error('❌ Error al adquirir plan (rotación):', err);
+    res.redirect('/panel?error=Error al adquirir plan');
+  }
+});
+
 
 
   } catch (err) {
