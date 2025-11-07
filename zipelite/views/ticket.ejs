@@ -1,3 +1,4 @@
+<!-- ✅ views/ticket.ejs — versión completa con mensaje de pantalla y PDF funcional -->
 <div id="ticket" style="max-width:700px;margin:30px auto;padding:30px;border-radius:20px;background:#121212;color:#fff;box-shadow:0 0 20px rgba(0,0,0,0.5);font-family:'Segoe UI',sans-serif;">
 
   <% if (sess && sess.admin) { %>
@@ -46,7 +47,15 @@
     </p>
 
     <% if (suscripcion.datosCuenta?.mensaje) { %>
-      <p><strong>🖥️ Pantalla asignada:</strong> <%= suscripcion.datosCuenta.mensaje %></p>
+      <p><strong>🖥️ Pantalla asignada:</strong> 
+        <span style="background:#1b1b1b;padding:5px 10px;border-radius:6px;color:#fff;">
+          <%= suscripcion.datosCuenta.mensaje %>
+        </span>
+      </p>
+    <% } else { %>
+      <p><strong>🖥️ Pantalla asignada:</strong> 
+        <span style="color:#aaa;">No especificada</span>
+      </p>
     <% } %>
   </div>
 
