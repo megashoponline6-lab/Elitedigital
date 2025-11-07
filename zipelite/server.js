@@ -387,26 +387,30 @@ for (const c of cuentas) {
 
 
 // ───────────────────────────────────────────────────────────────────────────────
-// 🎬 Detalle de plataforma
-// ───────────────────────────────────────────────────────────────────────────────
+// 🎬 Detalle de plataforma — versión con verificación de precios
 app.get('/plataforma/:id', requireAuth, async (req, res) => {
   try {
     const plataforma = await Platform.findById(req.params.id).lean();
     if (!plataforma) return res.status(404).send('Plataforma no encontrada');
 
-    const precios = [
-      { meses: 1,  precio: plataforma.precios?.[1]  || 0 },
-      { meses: 3,  precio: plataforma.precios?.[3]  || 0 },
-      { meses: 6,  precio: plataforma.precios?.[6]  || 0 },
-      { meses: 12, precio: plataforma.precios?.[12] || 0 },
-    ];
+    // ✅ Detectar precios válidos y marcar “agotado” donde no haya valor
+    const precios = [1, 3, 6, 12].map(meses => {
+      const valor = plataforma.precios?.[meses];
+      return {
+        meses,
+        precio: valor || null, // null = sin precio
+        agotado: !valor,       // true si no tiene precio
+      };
+    });
 
+    // 🔁 Render normal con info de agotado
     res.render('plataforma', { plataforma, precios });
   } catch (err) {
     console.error('❌ Error cargando plataforma:', err);
     res.status(500).send('Error interno del servidor');
   }
 });
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // 💳 Adquirir plan (rotación ordenada + ticket modal + cupos con pantallas)
