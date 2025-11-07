@@ -348,7 +348,6 @@ for (const c of cuentas) {
   disponibilidad[id] = (disponibilidad[id] || 0) + disponibles;
 }
 
-    }
 
     // ✅ Agregar campo cuposDisponibles a cada plataforma
     const productos = platforms.map(p => ({
