@@ -476,12 +476,17 @@ app.get('/ticket/:id', async (req, res) => {
     const plataforma =
       suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
     const dur = String(suscripcion.meses);
+        const dur = String(suscripcion.meses);
+
+    // 🧠 Prioridad: mensaje del cupo → mensaje del plan → mensaje genérico
     const mensaje =
+      suscripcion?.datosCuenta?.mensaje ||
       (plataforma?.mensajes &&
         (plataforma.mensajes[dur] || plataforma.mensajes[suscripcion.meses])) ||
       plataforma?.[`mensaje_${dur}`] ||
       plataforma?.[`mensaje_${suscripcion.meses}`] ||
-      'Gracias por tu compra.';
+      'Gracias por tu compra y disfruta de tu suscripción.';
+
 
     // 🧾 Render del ticket dentro del panel
     res.render('ticket', { suscripcion, plataforma, mensaje, dayjs });
