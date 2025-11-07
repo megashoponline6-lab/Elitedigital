@@ -331,14 +331,23 @@ app.get('/panel', csrfProtection, requireAuth, async (req, res) => {
       }
     }
 
-    // ✅ Consultar cuentas activas y calcular disponibilidad por plataforma
-    const cuentas = await Account.find({ activa: true }).lean();
-    const disponibilidad = {};
-    for (const c of cuentas) {
-      const disponibles = Math.max(c.cupos || 0, 0);
-      const id = c.plataformaId?.toString() || c.plataforma?.toString();
-      if (!id) continue;
-      disponibilidad[id] = (disponibilidad[id] || 0) + disponibles;
+    // ✅ Consultar cuentas activas y calcular disponibilidad por plataforma (nuevo modelo con pantallas)
+const cuentas = await Account.find({ activa: true }).lean();
+const disponibilidad = {};
+
+for (const c of cuentas) {
+  const id = c.plataformaId?.toString() || c.plataforma?.toString();
+  if (!id) continue;
+
+  // Contar cuántos cupos están disponibles (cupo.disponible === true)
+  const disponibles = Array.isArray(c.cupos)
+    ? c.cupos.filter(cupo => cupo.disponible === true).length
+    : 0;
+
+  // Sumar esos cupos al total por plataforma
+  disponibilidad[id] = (disponibilidad[id] || 0) + disponibles;
+}
+
     }
 
     // ✅ Agregar campo cuposDisponibles a cada plataforma
