@@ -1,4 +1,4 @@
-<!-- ✅ views/ticket.ejs — versión completa con mensaje de pantalla y PDF funcional -->
+<!-- ✅ views/ticket.ejs — versión final corregida (pantalla asignada + PDF funcional) -->
 <div id="ticket" style="max-width:700px;margin:30px auto;padding:30px;border-radius:20px;background:#121212;color:#fff;box-shadow:0 0 20px rgba(0,0,0,0.5);font-family:'Segoe UI',sans-serif;">
 
   <% if (sess && sess.admin) { %>
@@ -46,10 +46,19 @@
       <button onclick="copiar('password')" style="margin-left:5px;padding:5px 10px;border:none;border-radius:6px;background:#e50914;color:white;cursor:pointer;">Copiar</button>
     </p>
 
-    <% if (suscripcion.datosCuenta?.mensaje) { %>
+    <% 
+      // ✅ Compatibilidad extendida: asegura que el mensaje se muestre aunque Mongoose lo entregue distinto
+      const mensajePantalla = 
+        (suscripcion?.datosCuenta && 
+        (suscripcion.datosCuenta.mensaje || suscripcion.datosCuenta?.["mensaje"])) 
+        ? (suscripcion.datosCuenta.mensaje || suscripcion.datosCuenta?.["mensaje"])
+        : null; 
+    %>
+
+    <% if (mensajePantalla) { %>
       <p><strong>🖥️ Pantalla asignada:</strong> 
         <span style="background:#1b1b1b;padding:5px 10px;border-radius:6px;color:#fff;">
-          <%= suscripcion.datosCuenta.mensaje %>
+          <%= mensajePantalla %>
         </span>
       </p>
     <% } else { %>
