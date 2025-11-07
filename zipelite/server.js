@@ -485,9 +485,7 @@ app.post('/plataforma/:id/adquirir', requireAuth, async (req, res) => {
   }
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
 // 🎟️ Ticket de compra (cliente o admin pueden visualizarlo)
-// ───────────────────────────────────────────────────────────────────────────────
 app.get('/ticket/:id', async (req, res) => {
   try {
     const suscripcion = await Subscription.findById(req.params.id)
@@ -505,23 +503,31 @@ app.get('/ticket/:id', async (req, res) => {
       suscripcion.platformId || (await Platform.findById(suscripcion.platformId).lean());
     const dur = String(suscripcion.meses);
 
-    // 🧠 Prioridad: mensaje del cupo → mensaje del plan → mensaje genérico
-    const mensaje =
-      suscripcion?.datosCuenta?.mensaje ||
+    // 🖥️ Mensaje de pantalla (dentro de los datos de cuenta)
+    const mensajePantalla = suscripcion?.datosCuenta?.mensaje || null;
+
+    // 💬 Mensaje personalizado del administrador o del plan
+    const mensajeAdmin =
       (plataforma?.mensajes &&
         (plataforma.mensajes[dur] || plataforma.mensajes[suscripcion.meses])) ||
       plataforma?.[`mensaje_${dur}`] ||
       plataforma?.[`mensaje_${suscripcion.meses}`] ||
       'Gracias por tu compra y disfruta de tu suscripción.';
 
-
     // 🧾 Render del ticket dentro del panel
-    res.render('ticket', { suscripcion, plataforma, mensaje, dayjs });
+    res.render('ticket', {
+      suscripcion,
+      plataforma,
+      mensajePantalla,
+      mensaje: mensajeAdmin, // 👈 se envía por separado
+      dayjs,
+    });
   } catch (err) {
     console.error('❌ Error mostrando ticket:', err);
     res.status(500).send('Error interno del servidor');
   }
 });
+
 
 // ───────────────────────────────────────────────────────────────────────────────
 // 🧮 Panel admin
