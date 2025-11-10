@@ -160,15 +160,20 @@
 <!-- 🎥 SECCIÓN: Plataformas -->
 <section id="plataformas" class="mt-5 text-center">
   <h2 class="fw-bold mb-4" style="color:#ff6a00;">Plataformas disponibles</h2>
-  <div class="d-flex justify-content-center flex-wrap gap-5">
-    <img src="/brand/netflix.svg" width="80" alt="Netflix">
-    <img src="/brand/disney.svg" width="80" alt="Disney+">
-    <img src="/brand/hbomax.svg" width="80" alt="HBO Max">
-    <img src="/brand/spotify.svg" width="80" alt="Spotify">
-    <img src="/brand/prime.svg" width="80" alt="Prime Video">
-    <img src="/brand/crunchyroll.svg" width="80" alt="Crunchyroll">
+  <div class="d-flex justify-content-center flex-wrap gap-4">
+    <% if (plataformas && plataformas.length) { %>
+      <% plataformas.forEach(p => { %>
+        <div style="text-align:center;">
+          <img src="<%= p.ruta %>" width="80" alt="<%= p.nombre %>">
+          <p class="mt-2" style="color:#ccc; font-size:0.9rem;"><%= p.nombre %></p>
+        </div>
+      <% }) %>
+    <% } else { %>
+      <p class="text-muted">No hay imágenes disponibles.</p>
+    <% } %>
   </div>
 </section>
+
 
 <!-- ❤️ FOOTER -->
 <footer class="text-center mt-5 py-4" style="background:#0a0a0f; border-top:1px solid rgba(255,255,255,0.1);">
