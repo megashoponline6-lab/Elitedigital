@@ -163,11 +163,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// ───────────────────────────────────────────────────────────────────────────────
-// 🏠 Home
-// ───────────────────────────────────────────────────────────────────────────────
+// 🏠 Home dinámico — muestra automáticamente todas las imágenes de /public/img/plataformas
 app.get('/', (req, res) => {
-  res.render('home', { productos: [], etiquetas: [], filtro: '' });
+  const plataformasDir = path.join(process.cwd(), 'public', 'img', 'plataformas');
+
+  let plataformas = [];
+  try {
+    plataformas = fs
+      .readdirSync(plataformasDir)
+      .filter(file => /\.(png|jpe?g|svg|webp)$/i.test(file))
+      .map(file => ({
+        nombre: file.replace(/\.[^/.]+$/, ''), // quita extensión
+        ruta: `/img/plataformas/${file}`,
+      }));
+  } catch (err) {
+    console.error('❌ Error leyendo imágenes de plataformas:', err);
+  }
+
+  // 👇 Asegúrate de mandar plataformas a la vista
+  res.render('home', { plataformas });
 });
 
 // ───────────────────────────────────────────────────────────────────────────────
